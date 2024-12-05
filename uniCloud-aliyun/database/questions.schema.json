@@ -1,0 +1,101 @@
+// 文档教程: https://uniapp.dcloud.net.cn/uniCloud/schema
+{
+	"bsonType": "object",
+	"required": [],
+	"permission": {
+		"read": true,
+		"create": "auth.uid != null",
+		"update": false,
+		"delete": false
+	},
+	"properties": {
+		"_id": {
+			"description": "ID，系统自动生成"
+		},
+		"title":{
+			"bsonType": "string",
+			"description":"标题",
+			"label": "标题"
+		},
+		"descrip" :{
+			"bsonType": "string",
+			"description":"描述你的问题",
+			"label": "详情"
+		},
+		"difficulties":{
+			"bsonType": "int",
+			"enum":[{
+				"text":"简单",
+				"value":0
+			},
+			{
+				"text":"中等",
+				"value":1
+			},
+			{
+				"text":"困难",
+				"value":2
+			}],
+			"label": "难度"
+			},
+		"category":{
+			"bsonType": "string",
+			"description":"类型",
+			"label":"类型",
+			"enum":[{
+				"text":"数学题",
+				"value":"math"
+			},
+			{
+				"text":"编程题",
+				"value":"code"
+			},
+			{
+				"text":"求资料",
+				"value":"resource"
+			},
+			{
+				"text":"其他",
+				"value":"other"
+			}]
+		},
+		"time":{
+			"bsonType":"timestamp" ,
+			"description":"时间",
+			"forceDefaultValue": {
+			  "$env": "now"
+			}
+		},
+		"had_answer":{
+			"bsonType": "bool",
+			"description":"是否已有答案",
+			"defaultValue": false
+		},
+		"user_id":{
+			"bsonType": "string",
+			"description":"用户id",
+			"forceDefaultValue": {
+				 "$env": "uid"
+			},
+			"foreignKey": "uni-id-users._id"
+		},
+		 "images": {
+		        "bsonType": "array",
+		        "arrayType": "file",
+		        "title": "添加照片",
+		        "multiple": true, // 允许选择多张图片，schema2code生效
+		        "fileMediaType": "image", // 可选值 all|image|video 默认值为all,表示所有文件，image表示图片类型文件，video表示视频类型文件
+		        "fileExtName": "jpg,png", // 扩展名过滤，多个用 , 分割
+		        "maxLength": 3 // 限制最大数量
+		},
+		"states":{
+			"bsonType": "bool",
+			"description":"状态,软删除",
+			"defaultValue": true
+		},
+		"is_stick":{
+			"bsonType": "bool",
+			"label":"置顶"
+		}
+	}
+}
