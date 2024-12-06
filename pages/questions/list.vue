@@ -93,9 +93,7 @@
 		},
 		methods: {
 			updateQtmp(pastTime) {
-				this.questionsTemp = db.collection('questions').where({
-					time: dbCmd.gte(pastTime)
-				}).field('title,time,descrip,difficulties,category,images,is_stick,user_id').getTemp()
+				this.questionsTemp = db.collection('questions').where(`time >= ${this.pastTime}`).field('title,time,descrip,difficulties,category,images,is_stick,user_id').getTemp()
 			},
 			handleItemClick(id) {
 				uni.navigateTo({
@@ -129,17 +127,11 @@
 				this.dbWhere = this.getSearchWhere()
 			},
 			getSearchWhere() {
-				const baseWhere = {
-					time: dbCmd.gte(this.pastTime)
-				}
+				const baseWhere = `time >= ${this.pastTime}`
 				if (!this.searchKeyword) return baseWhere
-				return dbCmd.and([
-					baseWhere,
-					dbCmd.or([
-						{title: new RegExp(this.searchKeyword, 'i')},
-						{descrip: new RegExp(this.searchKeyword, 'i')}
-					])
-				])
+				let keywordReg = new RegExp(this.searchKeyword, 'i'); // 忽略大小写
+				return `time >= ${this.pastTime} && (${keywordReg}.test("title") || ${keywordReg}.test("descrip"))`;
+
 			}
 		}
 	}
