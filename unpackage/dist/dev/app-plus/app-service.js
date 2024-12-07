@@ -17002,8 +17002,7 @@ ${i3}
         selectedImages: [],
         currentUser: {
           _id: ""
-        },
-        pastTime: Date.now() - 24 * 60 * 60 * 1e3
+        }
       };
     },
     onLoad(e2) {
@@ -17047,11 +17046,23 @@ ${i3}
         this.getAnswers();
       },
       async chooseImage() {
-        const res = await uni.chooseImage({
-          count: 3,
-          sizeType: ["compressed"]
-        });
-        this.selectedImages = res.tempFilePaths;
+        if (this.selectedImages.length >= 3) {
+          uni.showToast({
+            title: "最多只能选择3张图片",
+            icon: "none"
+          });
+          return;
+        }
+        try {
+          const res = await uni.chooseImage({
+            count: 3 - this.selectedImages.length,
+            sizeType: ["compressed"],
+            sourceType: ["album", "camera"]
+          });
+          this.selectedImages = [...this.selectedImages, ...res.tempFilePaths];
+        } catch (e2) {
+          formatAppLog("error", "at pages/questions/detail.vue:210", e2);
+        }
       },
       async submitAnswer() {
         if (!this.answerContent && !this.selectedImages.length) {
@@ -17106,6 +17117,15 @@ ${i3}
         return category === "math" ? "数学题" : category === "code" ? "编程题" : category === "resource" ? "求资料" : "其他";
       },
       handleInputFocus() {
+        this.$refs.answerPopup.open();
+      },
+      handlePopupChange(e2) {
+        if (!e2.show) {
+          this.tempContent = "";
+        }
+      },
+      deleteImage(index) {
+        this.selectedImages.splice(index, 1);
       }
     }
   };
@@ -17113,6 +17133,7 @@ ${i3}
     const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$c);
     const _component_uni_load_more = resolveEasycom(vue.resolveDynamicComponent("uni-load-more"), __easycom_1$3);
     const _component_unicloud_db = resolveEasycom(vue.resolveDynamicComponent("unicloud-db"), __easycom_2$2);
+    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_1$4);
     return vue.openBlock(), vue.createElementBlock("view", null, [
       vue.createElementVNode("view", { class: "header-back" }, [
         vue.createVNode(_component_uni_icons, {
@@ -17344,7 +17365,7 @@ ${i3}
           {
             "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => $data.answerContent = $event),
             placeholder: "写下你的回答...",
-            class: "input-with-icon",
+            class: "input-trigger",
             onFocus: _cache[3] || (_cache[3] = (...args) => $options.handleInputFocus && $options.handleInputFocus(...args))
           },
           null,
@@ -17352,19 +17373,87 @@ ${i3}
           /* NEED_HYDRATION, NEED_PATCH */
         ), [
           [vue.vModelText, $data.answerContent]
+        ])
+      ]),
+      vue.createVNode(_component_uni_popup, {
+        ref: "answerPopup",
+        type: "bottom",
+        onChange: $options.handlePopupChange
+      }, {
+        default: vue.withCtx(() => [
+          vue.createElementVNode("view", { class: "answer-popup" }, [
+            vue.withDirectives(vue.createElementVNode(
+              "textarea",
+              {
+                "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => $data.answerContent = $event),
+                class: "answer-textarea",
+                placeholder: "写下你的回答...",
+                "adjust-position": false,
+                "cursor-spacing": 20,
+                fixed: true
+              },
+              null,
+              512
+              /* NEED_PATCH */
+            ), [
+              [vue.vModelText, $data.answerContent]
+            ]),
+            $data.selectedImages.length ? (vue.openBlock(), vue.createElementBlock("view", {
+              key: 0,
+              class: "selected-images"
+            }, [
+              (vue.openBlock(true), vue.createElementBlock(
+                vue.Fragment,
+                null,
+                vue.renderList($data.selectedImages, (image, index) => {
+                  return vue.openBlock(), vue.createElementBlock("view", {
+                    class: "image-item",
+                    key: index
+                  }, [
+                    vue.createElementVNode("image", {
+                      src: image,
+                      mode: "aspectFill"
+                    }, null, 8, ["src"]),
+                    vue.createElementVNode("view", {
+                      class: "delete-btn",
+                      onClick: ($event) => $options.deleteImage(index)
+                    }, "×", 8, ["onClick"])
+                  ]);
+                }),
+                128
+                /* KEYED_FRAGMENT */
+              ))
+            ])) : vue.createCommentVNode("v-if", true),
+            vue.createElementVNode("view", { class: "popup-footer" }, [
+              vue.createElementVNode("view", { class: "left-actions" }, [
+                vue.createVNode(_component_uni_icons, {
+                  type: "image",
+                  size: "24",
+                  color: "#666",
+                  onClick: $options.chooseImage
+                }, null, 8, ["onClick"]),
+                $data.selectedImages.length ? (vue.openBlock(), vue.createElementBlock(
+                  "text",
+                  {
+                    key: 0,
+                    class: "image-count"
+                  },
+                  vue.toDisplayString($data.selectedImages.length) + "/3",
+                  1
+                  /* TEXT */
+                )) : vue.createCommentVNode("v-if", true)
+              ]),
+              vue.createElementVNode("button", {
+                class: "submit-btn",
+                disabled: !$data.answerContent && !$data.selectedImages.length,
+                onClick: _cache[5] || (_cache[5] = (...args) => $options.submitAnswer && $options.submitAnswer(...args))
+              }, "发布", 8, ["disabled"])
+            ])
+          ])
         ]),
-        vue.createElementVNode("view", { class: "icon-container" }, [
-          vue.createVNode(_component_uni_icons, {
-            type: "image",
-            size: "23",
-            onClick: $options.chooseImage
-          }, null, 8, ["onClick"])
-        ]),
-        vue.createElementVNode("button", {
-          class: "submit-btn",
-          onClick: _cache[4] || (_cache[4] = (...args) => $options.submitAnswer && $options.submitAnswer(...args))
-        }, "发布")
-      ])
+        _: 1
+        /* STABLE */
+      }, 8, ["onChange"])
     ]);
   }
   const PagesQuestionsDetail = /* @__PURE__ */ _export_sfc(_sfc_main$q, [["render", _sfc_render$p], ["__file", "D:/Users/ldfd/Document/HBuilderProjects/OnlineQA/pages/questions/detail.vue"]]);

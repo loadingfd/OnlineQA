@@ -74,12 +74,45 @@
         </view>
 
         <view class="footer-input">
-            <input v-model="answerContent" placeholder="写下你的回答..." class="input-with-icon" @focus="handleInputFocus" />
-            <view class="icon-container">
-                <uni-icons type="image" size="23" @click="chooseImage" />
-            </view>
-            <button class="submit-btn" @click="submitAnswer">发布</button>
+            <input v-model="answerContent" placeholder="写下你的回答..." class="input-trigger" @focus="handleInputFocus" />
         </view>
+
+        <uni-popup ref="answerPopup" type="bottom" @change="handlePopupChange">
+            <view class="answer-popup">
+                <textarea 
+                    v-model="answerContent"
+                    class="answer-textarea"
+                    placeholder="写下你的回答..."
+                    :adjust-position="false"
+                    :cursor-spacing="20"
+                    :fixed="true"
+                />
+                
+                <view class="selected-images" v-if="selectedImages.length">
+                    <view class="image-item" v-for="(image, index) in selectedImages" :key="index">
+                        <image :src="image" mode="aspectFill" />
+                        <view class="delete-btn" @click="deleteImage(index)">×</view>
+                    </view>
+                </view>
+                
+                <view class="popup-footer">
+                    <view class="left-actions">
+                        <uni-icons 
+                            type="image" 
+                            size="24" 
+                            color="#666"
+                            @click="chooseImage"
+                        />
+                        <text class="image-count" v-if="selectedImages.length">{{selectedImages.length}}/3</text>
+                    </view>
+                    <button 
+                        class="submit-btn" 
+                        :disabled="!answerContent && !selectedImages.length"
+                        @click="submitAnswer"
+                    >发布</button>
+                </view>
+            </view>
+        </uni-popup>
     </view>
 </template>
 
@@ -106,8 +139,7 @@ export default {
             selectedImages: [],
             currentUser: {
                 _id: ''
-            },
-            pastTime: Date.now() - 24 * 60 * 60 * 1000
+            }
         }
     },
     onLoad(e) {
@@ -158,11 +190,25 @@ export default {
         },
         
         async chooseImage() {
-            const res = await uni.chooseImage({
-                count: 3,
-                sizeType: ['compressed']
-            })
-            this.selectedImages = res.tempFilePaths
+            if (this.selectedImages.length >= 3) {
+                uni.showToast({
+                    title: '最多只能选择3张图片',
+                    icon: 'none'
+                });
+                return;
+            }
+            
+            try {
+                const res = await uni.chooseImage({
+                    count: 3 - this.selectedImages.length,
+                    sizeType: ['compressed'],
+                    sourceType: ['album', 'camera']
+                });
+                
+                this.selectedImages = [...this.selectedImages, ...res.tempFilePaths];
+            } catch (e) {
+                console.error(e);
+            }
         },
         
         async submitAnswer() {
@@ -229,8 +275,17 @@ export default {
         },
 
         handleInputFocus() {
-            // 处理输入框获得焦点的逻辑
-            // 可以在这里添加一些动画效果或其他交互
+            this.$refs.answerPopup.open()
+        },
+
+        handlePopupChange(e) {
+            if (!e.show) {
+                this.tempContent = '';
+            }
+        },
+
+        deleteImage(index) {
+            this.selectedImages.splice(index, 1);
         }
     }
 }
@@ -460,13 +515,10 @@ export default {
     position: fixed;
     bottom: 0;
     left: 0;
-    width: 100%;
+    right: 0;
+    padding: 20rpx;
     background-color: #fff;
-    padding: 10px;
-    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    border-top: 1px solid #eee;
 }
 
 .input-with-icon {
@@ -483,20 +535,114 @@ export default {
     cursor: pointer;
 }
 
+.post-image {
+	width: 200rpx;
+	height: 200rpx;
+}
+
+.footer-input {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20rpx;
+    background-color: #fff;
+    border-top: 1px solid #eee;
+}
+
+.input-trigger {
+    margin: 0rpx 0rpx 0rpx 0rpx;
+    height: 72rpx;
+    background-color: #f5f5f5;
+    border-radius: 36rpx;
+    padding: 0 30rpx;
+    font-size: 28rpx;
+}
+
+.answer-popup {
+    background-color: #fff;
+    padding: 30rpx;
+    padding-bottom: calc(30rpx + constant(safe-area-inset-bottom));
+    padding-bottom: calc(30rpx + env(safe-area-inset-bottom));
+}
+
+.answer-textarea {
+    width: 100%;
+    height: 300rpx;
+    font-size: 32rpx;
+    line-height: 48rpx;
+    padding: 20rpx;
+    box-sizing: border-box;
+    background-color: #f5f5f5;
+    border-radius: 16rpx;
+}
+
+.selected-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20rpx;
+    margin-top: 30rpx;
+}
+
+.image-item {
+    position: relative;
+    width: 160rpx;
+    height: 160rpx;
+}
+
+.image-item image {
+    width: 100%;
+    height: 100%;
+    border-radius: 8rpx;
+}
+
+.delete-btn {
+    position: absolute;
+    right: -12rpx;
+    top: -12rpx;
+    width: 40rpx;
+    height: 40rpx;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32rpx;
+}
+
+.popup-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30rpx;
+}
+
+.left-actions {
+    display: flex;
+    align-items: center;
+    gap: 10rpx;
+}
+
+.image-count {
+    font-size: 24rpx;
+    color: #999;
+}
+
 .submit-btn {
     background-color: #007AFF;
     color: #fff;
     font-size: 28rpx;
-    padding: 0 30rpx;
+    padding: 0 40rpx;
     height: 60rpx;
+	width: 140rpx;
     line-height: 60rpx;
-    border-radius: 30rpx;
-    border: none;
-    cursor: pointer;
+    border-radius: 36rpx;
+    margin-right: 0rpx;
+    border: 1rpx solid;
 }
 
-.post-image {
-	width: 200rpx;
-	height: 200rpx;
+.submit-btn:disabled {
+    background-color: #ccc;
 }
 </style>
