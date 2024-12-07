@@ -54,6 +54,7 @@
 	</view>
 </template>
 
+
 <script>
 	const db = uniCloud.database()
 	const dbCmd = db.command
