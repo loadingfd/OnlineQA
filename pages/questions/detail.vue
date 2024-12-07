@@ -1,348 +1,502 @@
 <template>
-  <view >
-	    <view class="header-back">
-	             <uni-icons type="left" size="24" @click="goBack"></uni-icons>
-	             <text>返回</text>
-	           </view>
-	  <view class="original-post">
-    <unicloud-db ref="udb" v-slot:default="{data, loading, error, options}" :options="options" :collection="collectionList" field="title,descrip,difficulties,category,images,is_stick,user_id{nickname,avatar_file}" :where="queryWhere" :getone="true" :manual="true">
-      <view v-if="error">{{error.message}}</view>
-      <view v-else-if="loading">
-        <uni-load-more :contentText="loadMore" status="loading"></uni-load-more>
-      </view>
-      <view v-else-if="data" >
-		  <view class="user-info">
-		    <view class="avatar-container">
-	          <cloud-image class="avatar" mode="aspectFill" :src="data.user_id[0].avatar_file.url" />
-		    </view>
-			<text class="nickname"> {{data.user_id[0].nickname}}</text> 
-		  </view>	
-        <view class="question-content">
-          <text class="title">{{data.title}}</text>
-          <text class="description">{{data.descrip}}</text>
+    <view>
+        <view class="header-back">
+            <uni-icons type="left" size="24" @click="goBack"></uni-icons>
+            <text>返回</text>
         </view>
-        <view>
-        <template v-for="(file, j) in data.images">
-        <cloud-image class="post-image" mode="aspectFill" :src="file.url" v-if="file.fileType === 'image'" />
-        </template>
+        <view class="original-post">
+            <unicloud-db ref="udb" v-slot:default="{ data, loading, error }" :collection="collectionList"
+                :where="queryWhere" :getone="true" :manual="true">
+                <view v-if="error">{{ error.message }}</view>
+                <view v-else-if="loading">
+                    <uni-load-more :contentText="loadMore" status="loading"></uni-load-more>
+                </view>
+                <view v-else-if="data">
+                    <view class="user-info">
+                        <view class="avatar-container">
+                            <image class="avatar" mode="aspectFill" :src="data.user_id[0].avatar_file.url" />
+                        </view>
+                        <text class="nickname"> {{ data.user_id[0].nickname }}</text>
+                    </view>
+                    <view class="question-content">
+                        <text class="title">{{ data.title }}</text>
+                        <text class="description">{{ data.descrip }}</text>
+                    </view>
+                    <view>
+                        <template v-for="(file, j) in data.images">
+                            <image class="post-image" :src="file.url"
+                                v-if="file.fileType === 'image'" />
+                        </template>
+                    </view>
+                    <view class="tags">
+                        <text class="tag difficulty" :class="difficultyClass(data.difficulties)">
+                            {{ difficultyText(data.difficulties) }}
+                        </text>
+                        <text class="tag category">{{ categoryText(data.category) }}</text>
+                    </view>
+                </view>
+            </unicloud-db>
         </view>
-        <view class="tags">
-          <text v-if="data.is_stick" class="stick-tag">置顶</text>
-		   <text class="tag difficulty" :class="{ 'easy': data.difficulties === 0, 'medium': data.difficulties=== 1, 'hard': data.difficulties === 2 }">{{options.difficulties_valuetotext[data.difficulties]}}</text>
-		   <text class="tag category">{{options.category_valuetotext[data.category]}}</text>
-          <!-- <text>{{data.is_stick == true ? '✅' : '❌'}}</text> -->
+
+        <view class="answers-section">
+            <view class="answers-header">
+                <text class="answers-count">{{ answersCount }}个回答</text>
+                <view class="sort-options">
+                    <text :class="['sort-item', sortBy === 'time' ? 'active' : '']" @click="changeSort('time')">最新</text>
+                    <text :class="['sort-item', sortBy === 'thumbs' ? 'active' : '']" @click="changeSort('thumbs')">最赞</text>
+                </view>
+            </view>
+
+            <view class="answer-list">
+                <view v-for="(answer, index) in answers" :key="index" class="answer-item">
+                    <view class="answerer-info">
+                        <image class="avatar" :mode="scaleToFill" :src="answer.user.avatar" mode="aspectFill" />
+                        <text class="nickname">{{ answer.user.nickname }}</text>
+                    </view>
+                    <view class="answer-content">
+                        <text class="answer-text">{{ answer.content }}</text>
+                        <view class="answer-images" v-if="answer.images && answer.images.length">
+                            <image v-for="(img, i) in answer.images" :key="i" :src="img.url" mode="aspectFill" class="answer-image" />
+                        </view>
+                    </view>
+                    <view class="answer-actions">
+                        <view class="action-item" @click="likeAnswer(answer)">
+                            <uni-icons type="hand-up" size="20" color="#409EFF" />
+                            <text>{{ answer.thumbs }}</text>
+                        </view>
+                        <view class="action-item">
+                            <uni-icons type="chat" size="20" />
+                            <text>评论</text>
+                        </view>
+                    </view>
+                </view>
+            </view>
         </view>
-		
-      </view>
-    </unicloud-db>
-    <!-- <view class="btns">
-      <button type="primary" @click="handleUpdate">修改</button>
-      <button type="warn" class="btn-delete" @click="handleDelete">删除</button>
-    </view> -->
-	<view class="footer-input">
-		<view class="icon-container"> 
-		  <uni-icons type="home" size="20" class="left-icon"> </uni-icons>
-		</view>
-		<view>
-		  <input placeholder="请输入你的回答" class="input-with-icon"/>
-		</view>
-		<view class="icon-container">
-			<uni-icons type="image" size="23" class="right-icon"></uni-icons>
-		</view>
-			<button class="sendbtn">发送</button>
-	</view>
-   </view>
-  </view>
-  
-    <view class="reply"></view>
-	<view>
-		<text class> 回复</text>
-	</view>
+
+        <view class="footer-input">
+            <input v-model="answerContent" placeholder="写下你的回答..." class="input-with-icon" @focus="handleInputFocus" />
+            <view class="icon-container">
+                <uni-icons type="image" size="23" @click="chooseImage" />
+            </view>
+            <button class="submit-btn" @click="submitAnswer">发布</button>
+        </view>
+    </view>
 </template>
 
 
 <script>
-  // 由schema2code生成，包含校验规则和enum静态数据
-  import { enumConverter } from '../../js_sdk/validator/questions.js'
-  const db = uniCloud.database()
+const db = uniCloud.database()
 
-  export default {
+export default {
     data() {
-      return {
-        queryWhere: '',
-        collectionList: "questions,uni-id-users",
-        loadMore: {
-          contentdown: '',
-          contentrefresh: '',
-          contentnomore: ''
-        },
-        options: {
-          // 将scheme enum 属性静态数据中的value转成text
-          ...enumConverter
-        },
-		// 新增，用于存储查询到的用户昵称
-      }
+        return {
+            queryWhere: '',
+            collectionList: null,
+            usersTmp: null,
+            question: null,
+            loadMore: {
+                contentdown: '',
+                contentrefresh: '',
+                contentnomore: ''
+            },
+            answers: [],
+            answersCount: 0,
+            sortBy: 'time',
+            answerContent: '',
+            selectedImages: [],
+            currentUser: {
+                _id: ''
+            },
+            pastTime: Date.now() - 24 * 60 * 60 * 1000
+        }
     },
     onLoad(e) {
-      this._id = e.id
+        this._id = e.id
     },
     onReady() {
-      if (this._id) {
-        this.queryWhere = '_id=="' + this._id + '"'
-      }
+        if (this._id) {
+            this.queryWhere = '_id=="' + this._id + '"'
+            this.question = db.collection('questions').where(`_id=="${this._id}"`).getTemp()
+            this.usersTmp = db.collection('uni-id-users').field('_id,nickname,avatar_file').getTemp()
+            this.collectionList = [this.question, this.usersTmp]
+            
+            this.getAnswers()
+        }
     },
     methods: {
-	  goBack() {
-		    uni.navigateBack();
-	      },
-      handleUpdate() {
-        // 打开修改页面
-        uni.navigateTo({
-          url: './edit?id=' + this._id,
-          events: {
-            // 监听修改页面成功修改数据后, 刷新当前页面数据
-            refreshData: () => {
-              this.$refs.udb.loadData({
-                clear: true
-              })
-            }
-          }
-        })
-      },
-      handleDelete() {
-        this.$refs.udb.remove(this._id, {
-          success: (res) => {
-            // 删除数据成功后跳转到list页面
+        goBack() {
+            uni.navigateBack()
+        },
+        handleUpdate() {
             uni.navigateTo({
-              url: './list'
+                url: './edit?id=' + this._id,
+                events: {
+                    refreshData: () => {
+                        this.$refs.udb.loadData({
+                            clear: true
+                        })
+                        this.getAnswers()
+                    }
+                }
             })
-          }
-        })
-      }
-    },
-	
-  }
+        },
+        async getAnswers() {
+            const answers = await db.collection('answers')
+                .where({
+                    question_id: this._id
+                })
+                .orderBy(this.sortBy, 'desc')
+                .get()
+            
+            this.answers = answers.data
+            this.answersCount = answers.data.length
+        },
+        
+        changeSort(type) {
+            this.sortBy = type
+            this.getAnswers()
+        },
+        
+        async chooseImage() {
+            const res = await uni.chooseImage({
+                count: 3,
+                sizeType: ['compressed']
+            })
+            this.selectedImages = res.tempFilePaths
+        },
+        
+        async submitAnswer() {
+            if(!this.answerContent && !this.selectedImages.length) {
+                uni.showToast({
+                    title: '请输入回答内容或上传图片',
+                    icon: 'none'
+                })
+                return
+            }
+            
+            const imageUrls = []
+            if(this.selectedImages.length) {
+                for(let path of this.selectedImages) {
+                    const res = await uniCloud.uploadFile({
+                        filePath: path,
+                        cloudPath: `answers/${Date.now()}-${Math.random()}.jpg`
+                    })
+                    imageUrls.push({
+                        url: res.fileID
+                    })
+                }
+            }
+            
+            await db.collection('answers').add({
+                question_id: this._id,
+                content: this.answerContent,
+                images: imageUrls,
+                user_id: this.currentUser._id,
+                thumbs: 0,
+                create_time: Date.now()
+            })
+            
+            this.getAnswers()
+            
+            this.answerContent = ''
+            this.selectedImages = []
+        },
+
+        async likeAnswer(answer) {
+            const dbAnswer = db.collection('answers').doc(answer._id)
+            await dbAnswer.update({
+                thumbs: db.command.inc(1)
+            })
+            answer.thumbs += 1
+        },
+
+        difficultyClass(difficulty) {
+            return {
+                easy: difficulty === 0,
+                medium: difficulty === 1,
+                hard: difficulty === 2
+            }
+        },
+
+        difficultyText(difficulty) {
+            return difficulty === 0 ? '简单' : difficulty === 1 ? '中等' : '困难'
+        },
+
+        categoryText(category) {
+            return category === 'math' ? '数学题' :
+                   category === 'code' ? '编程题' :
+                   category === 'resource' ? '求资料' : '其他'
+        },
+
+        handleInputFocus() {
+            // 处理输入框获得焦点的逻辑
+            // 可以在这里添加一些动画效果或其他交互
+        }
+    }
+}
 </script>
 
 <style>
-  .post-image{
-	    
-	    width: 100%; /* 假设图片占满父容器宽度，如果有不同需求可调整 */
-	    margin-bottom: 10px;
-		 margin-left: 20px;/* 图片之间的垂直间距 */
-	    border-radius: 5px;
-	    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* 图片阴影效果 */
-	
-  }	
-  .container {
-    background-color: #f4f4f4;
-	margin-bottom: 0px;
-  }
-
-  .btns {
-    margin-top: 10px;
-    /* #ifndef APP-NVUE */
+.header-back {
     display: flex;
-    /* #endif */
-    flex-direction: row;
-  }
+    align-items: center;
+    background-color: #f4f4f4;
+    height: 40px;
+    padding-left: 10px;
+}
 
-  .btns button {
+.header-back uni-icons {
+    margin-right: 10px;
+}
+
+.original-post {
+    background-color: #ffffff;
+    margin-bottom: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.user-info {
+    display: flex;
+    padding: 10rpx;
+    margin-left: 0;
+    margin-bottom: 10rpx;
+    align-items: center;
+}
+
+.avatar-container {
+    display: flex;
+    align-items: center;
+}
+
+.avatar {
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    margin-right: 10rpx;
+    overflow: hidden;
+    box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+}
+
+.nickname {
+    font-size: 30rpx;
+    color: #666;
+}
+
+.question-content {
+    margin-left: 10rpx;
+    width: 90%;
+}
+
+.title {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #333;
+    display: block;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.description {
+    font-size: 28rpx;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 15rpx;
+    display: block;
+    text-align: left;
+    word-wrap: break-word;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10rpx;
+    margin-left: 15px;
+}
+
+.tag {
+    font-size: 24rpx;
+    padding: 4rpx 16rpx;
+    border-radius: 20rpx;
+}
+
+.difficulty {
+    background-color: #e6f3ff;
+    color: #409eff;
+}
+
+.difficulty.easy {
+    background-color: #f0f9eb;
+    color: #67c23a;
+}
+
+.difficulty.medium {
+    background-color: #fdf6ec;
+    color: #e6a23c;
+}
+
+.difficulty.hard {
+    background-color: #fef0f0;
+    color: #f56c6c;
+}
+
+.category {
+    background-color: #f0f9eb;
+    color: #67c23a;
+}
+
+.answers-section {
+    padding: 20rpx 30rpx;
+    padding-bottom: 120rpx;
+    background-color: #fff;
+}
+
+.answers-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20rpx 0;
+    border-bottom: 1rpx solid #eee;
+}
+
+.answers-count {
+    font-size: 28rpx;
+    color: #666;
+}
+
+.sort-options {
+    display: flex;
+    gap: 20rpx;
+}
+
+.sort-item {
+    padding: 10rpx 20rpx;
+    font-size: 28rpx;
+    color: #666;
+    cursor: pointer;
+}
+
+.sort-item.active {
+    color: #007AFF;
+    font-weight: bold;
+}
+
+.answer-list {
+    margin-top: 20rpx;
+}
+
+.answer-item {
+    background-color: #fff;
+    padding: 30rpx;
+    margin-bottom: 20rpx;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.answerer-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15rpx;
+}
+
+.answerer-info .avatar {
+    width: 35rpx;
+    height: 35rpx;
+}
+
+.answerer-info .nickname {
+    font-size: 26rpx;
+    color: #333;
+    margin-left: 10rpx;
+}
+
+.answer-content {
+    margin: 20rpx 0;
+}
+
+.answer-text {
+    font-size: 28rpx;
+    line-height: 1.6;
+    color: #333;
+}
+
+.answer-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10rpx;
+    margin-top: 20rpx;
+}
+
+.answer-image {
+    width: 220rpx;
+    height: 220rpx;
+    border-radius: 8rpx;
+}
+
+.answer-actions {
+    display: flex;
+    gap: 40rpx;
+    margin-top: 20rpx;
+    color: #666;
+}
+
+.action-item {
+    display: flex;
+    align-items: center;
+    gap: 10rpx;
+    cursor: pointer;
+}
+
+.action-item uni-icons {
+    margin-right: 5rpx;
+}
+
+.footer-input {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #fff;
+    padding: 10px;
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.input-with-icon {
     flex: 1;
-  }
+    height: 60rpx;
+    padding-left: 15rpx;
+    font-size: 28rpx;
+    background-color: #f0f0f0;
+    border-radius: 30rpx;
+    outline: none;
+}
 
-  .btn-delete {
-    margin-left: 10px;
-  }
-	
-  .original-post {
-	    background-color: transparent; /* 统一设置与回复相同的背景色 */
-	  
-	    
-	    margin-bottom: 10px; /* 添加底部外边距，让原帖和回复之间有间隔 */
-	    padding: 10px; /* 添加内边距，让内容不紧贴边框 */
-  }
-	
-  .reply {
-		margin-top: 5px;
-	    background-color: transparent; /* 统一设置背景色 */
-	    padding: 10px;
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) inset;
-  }
+.icon-container uni-icons {
+    cursor: pointer;
+}
 
-	.user-info {
-		display: flex;
-		padding: 20rpx;
-		margin-left: 0rpx;
-		margin-bottom: 0rpx;
-	}
+.submit-btn {
+    background-color: #007AFF;
+    color: #fff;
+    font-size: 28rpx;
+    padding: 0 30rpx;
+    height: 60rpx;
+    line-height: 60rpx;
+    border-radius: 30rpx;
+    border: none;
+    cursor: pointer;
+}
 
-	.avatar-container {
-		display: flex;
-		align-items: center;
-	}
-
-	.avatar {
-		width: 40rpx;
-		height: 40rpx;
-		border-radius: 50%;
-		margin-bottom: 0rpx;
-		overflow: hidden;
-		box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
-	}
-
-	.nickname {
-		font-size: 28rpx;
-		color: #666;
-		text-align: center;
-		margin-left: 20rpx;
-		margin-top:15px;
-	}
-
-	.question-content {
-		padding: 0rpx 0rpx 0rpx 30rpx;
-		width: calc(90% - 60px);
-	}
-
-	.title-container {
-		display: flex;
-		align-items: center;
-		margin-bottom: 10rpx;
-	}
-
-	.stick-tag {
-		font-size: 24rpx;
-		color: #ff5a5f;
-		border: 1px solid #ff5a5f;
-		padding: 2rpx 10rpx;
-		border-radius: 10rpx;
-		margin-right: 10rpx;
-		
-	}
-	.tags{
-		margin-left: 15px;
-	}
-
-	.title {
-		font-size: 32rpx;
-		font-weight: bold;
-		color: #333;
-		display: block;
-		text-align: left;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.description {
-		font-size: 28rpx;
-		color: #666;
-		line-height: 1.5;
-		margin-bottom: 15rpx;
-		display: block;
-		text-align: left;
-		word-wrap: break-word;
-		word-break: break-all;
-		white-space: pre-wrap;
-	}
-
-	.tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 10rpx;
-	}
-
-	.tag {
-		font-size: 24rpx;
-		padding: 4rpx 16rpx;
-		border-radius: 20rpx;
-	}
-
-	.difficulty {
-		background-color: #e6f3ff;
-		color: #409eff;
-	}
-
-	.difficulty.easy {
-		background-color: #f0f9eb;
-		color: #67c23a;
-	}
-
-	.difficulty.medium {
-		background-color: #fdf6ec;
-		color: #e6a23c;
-	}
-
-	.difficulty.hard {
-		background-color: #fef0f0;
-		color: #f56c6c;
-	}
-
-	.category {
-		background-color: #f0f9eb;
-		color: #67c23a;
-	}
-	
-	.footer-input {
-	     position: fixed;
-	     bottom: 0;
-	     left: 0;
-	     width: 100%;
-	     background-color: #fff;
-	     padding: 10px;
-	     box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1);
-		 display: flex;
-    }
-	
-	.icon-container {
-	    display: flex;
-	    flex-direction: column;
-	    align-items: flex-start;
-	    margin-right: 10px;
-	}
-	
-	.input-with-icon {
-	    flex: 1;
-		height: 30px;
-		width:203px;
-		margin-top:4px;
-	    margin-right: 10px; 
-	    outline: none;
-	    font-size: 16px;
-	    padding-left: 5px;
-		background-color: #ededed;
-		 border-radius: 10px;
-	}
-	
-	.icon-text {
-	    font-size: 12px;
-	    color: #666;
-	}
-	
-	.right-icon{
-		
-		margin-right: 10px;
-		margin-top: 7px;
-	}
-	.left-icon{
-		margin-left: 0px;
-		margin-top: 7px;
-	}
-	
-	.header-back {
-	       display: flex;
-	       align-items: center;
-	       background-color: #f4f4f4;
-	       height: 40px;
-	       padding-left: 10px;
-	    
-	}
-	
-	.header-back.un-icons {
-	       margin-right: 10px;
-	}
-	
-	.sendbtn{
-		margin-right: 20px;
-	}
+.post-image {
+	width: 200rpx;
+	height: 200rpx;
+}
 </style>

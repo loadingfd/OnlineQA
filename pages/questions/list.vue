@@ -7,7 +7,7 @@
 			<uni-segmented-control :current="timeFilter" :values="['最近一天', '最近三天']"
 				@clickItem="handleTimeFilterChange" />
 		</view>
-		<unicloud-db ref="udb" v-slot:default="{ data, pagination, loading, hasMore, error }" 
+		<unicloud-db ref="udb" v-slot:default="{ data, loading, hasMore, error }" 
 			:collection="colList" :where="dbWhere" :field="field" :getone="false" 
 			:getcount="true" :orderby="'is_stick desc,time desc'">
 			<view v-if="error" class="error-message">{{ error.message }}</view>
@@ -18,7 +18,7 @@
 						<template v-slot:header>
 							<view class="user-info">
 								<view class="avatar-container">
-									<cloud-image class="avatar" mode="aspectFill" :src="item.user_id[0].avatar_file.url" />
+									<image class="avatar" mode="aspectFill" :src="item.user_id[0].avatar_file.url" />
 									<text class="nickname">{{ item.user_id[0].nickname }}</text>
 								</view>
 							</view>
@@ -57,7 +57,6 @@
 
 <script>
 	const db = uniCloud.database()
-	const dbCmd = db.command
 	export default {
 		data() {
 			return {
@@ -70,7 +69,7 @@
 				pastTime: 0,
 				searchKeyword: '',
 				dbWhere: {},
-				field: 'title,time,descrip,difficulties,category,images,is_stick,user_id{nickname,avatar_file}',
+				field: 'title,time,descrip,difficulties,category,is_stick,user_id{nickname,avatar_file}',
 				questionsTemp: null,
 				usersTemp: null,
 				colList: null
@@ -94,7 +93,8 @@
 		},
 		methods: {
 			updateQtmp(pastTime) {
-				this.questionsTemp = db.collection('questions').where(`time >= ${this.pastTime}`).field('title,time,descrip,difficulties,category,images,is_stick,user_id').getTemp()
+				this.questionsTemp = db.collection('questions').where(`time >= ${pastTime}`).
+				field('title,time,descrip,difficulties,category,is_stick,user_id').getTemp()
 			},
 			handleItemClick(id) {
 				uni.navigateTo({
@@ -173,9 +173,9 @@
 
 	.user-info {
 		display: flex;
-		padding: 20rpx;
-		margin-right: 30rpx;
-		margin-bottom: 20rpx;
+		padding: 15rpx;
+		margin-right: 15rpx;
+		margin-bottom: 10rpx;
 	}
 
 	.avatar-container {
