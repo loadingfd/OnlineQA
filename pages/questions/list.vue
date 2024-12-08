@@ -92,9 +92,10 @@
 			this.$refs.udb.loadMore()
 		},
 		methods: {
-			updateQtmp(pastTime) {
-				this.questionsTemp = db.collection('questions').where(`time >= ${pastTime}`).
+			updateQtmp() {
+				this.questionsTemp = db.collection('questions').where(`time >= ${this.pastTime}`).
 				field('title,time,descrip,difficulties,category,is_stick,user_id').getTemp()
+				this.colList = [this.questionsTemp, this.usersTemp]
 			},
 			handleItemClick(id) {
 				uni.navigateTo({
@@ -118,21 +119,24 @@
 				this.setTimeFilter(e.currentIndex)
 			},
 			setTimeFilter(index) {
-				const now = Date.now() // 获取当前时间戳
 				const days = index === 0 ? 1 : 3
-				this.pastTime = now - days * 24 * 60 * 60 * 1000 // 直接计算过去时间的时间戳
+				const pastTime = new Date()
+				pastTime.setDate(pastTime.getDate() - (days - 1))
+				pastTime.setHours(0, 0, 0, 0)
+				this.pastTime = pastTime.getTime()
 				this.dbWhere = this.getSearchWhere()
-				this.updateQtmp(this.pastTime)
+				console.log(this.pastTime)
+				this.updateQtmp()
 			},
 			handleSearch(e) {
 				this.dbWhere = this.getSearchWhere()
 			},
 			getSearchWhere() {
-				const baseWhere = `time >= ${this.pastTime}`
-				if (!this.searchKeyword) return baseWhere
-				let keywordReg = new RegExp(this.searchKeyword, 'i'); // 忽略大小写
-				return `time >= ${this.pastTime} && (${keywordReg}.test("title") || ${keywordReg}.test("descrip"))`;
-
+				if (this.searchKeyword) {
+					let keywordReg = new RegExp(this.searchKeyword, 'i'); // 忽略大小写
+					return `(${keywordReg}.test("title") || ${keywordReg}.test("descrip"))`;
+				}
+				
 			}
 		}
 	}
