@@ -30,7 +30,12 @@
 		},
 		"user_id" : {
 			"bsonType": "string",
-			"description": "回答者id"
+			"description": "回答者id",
+			"forceDefaultValue": {
+					 "$env": "uid"
+				}
+			},
+			"foreignKey": "uni-id-users._id"
 		},
 		"time" : {
 			"bsonType": "timestamp",
