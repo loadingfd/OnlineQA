@@ -93,8 +93,15 @@
 		},
 		methods: {
 			updateQtmp() {
-				this.questionsTemp = db.collection('questions').where(`time >= ${this.pastTime}`).
-				field('title,time,descrip,difficulties,category,is_stick,user_id').getTemp()
+				if(true) {
+					//debug
+					this.questionsTemp = db.collection('questions').where(`time >= ${0}`).
+					field('title,time,descrip,difficulties,category,is_stick,user_id').getTemp()
+				}else {
+					this.questionsTemp = db.collection('questions').where(`time >= ${this.pastTime}`).
+					field('title,time,descrip,difficulties,category,is_stick,user_id').getTemp()
+				}
+				
 				this.colList = [this.questionsTemp, this.usersTemp]
 			},
 			handleItemClick(id) {
@@ -125,7 +132,7 @@
 				pastTime.setHours(0, 0, 0, 0)
 				this.pastTime = pastTime.getTime()
 				this.dbWhere = this.getSearchWhere()
-				console.log(this.pastTime)
+				//console.log(this.pastTime)
 				this.updateQtmp()
 			},
 			handleSearch(e) {

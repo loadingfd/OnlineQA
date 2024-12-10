@@ -65,8 +65,9 @@
 			
 				<view v-for="(answer, index) in answers" :key="index" class="answer-item">
 					<view class="answerer-info">
-						<image class="avatar" :mode="scaleToFill" :src="answer.user.avatar" mode="aspectFill" />
-						<text class="nickname">{{ answer.user.nickname }}</text>
+<!-- 						<image class="avatar" :mode="scaleToFill" :src="answer.user.avatar" mode="aspectFill" />
+						<text class="nickname">{{ answer.user.nickname }}</text> -->
+						<text>{{index+1}}楼</text>
 					</view>
 					<view class="answer-content">
 						<text class="answer-text">{{ answer.content }}</text>
@@ -115,12 +116,33 @@
 				</view>
 			</view>
 		</uni-popup>
+
+		<view class="image-viewer" v-if="showModal" @click="recover_photo">
+			<movable-area class="movable-area">
+				<movable-view class="movable-view" 
+					direction="all" 
+					:scale="true"
+					:scale-min="1"
+					:scale-max="4"
+					:scale-value="1"
+					out-of-bounds>
+					<image 
+						:src="large_photo" 
+						class="preview-image"
+						mode="aspectFit"
+						@click.stop
+					/>
+				</movable-view>
+			</movable-area>
+			<view class="close-btn" @click.stop="recover_photo">×</view>
+		</view>
 	</view>
 </template>
 
 
 <script>
 	const db = uniCloud.database()
+	const dbJQL = uniCloud.databaseForJQL()
 
 	export default {
 		data() {
@@ -179,15 +201,13 @@
 				})
 			},
 			async getAnswers() {
-				let answers = await db.collection('answers')
-					.where({
-						question_id: this._id
-					})
-					.orderBy(this.sortBy, 'desc')
-					.get()
-
-				this.answers = answers.data
-				this.answersCount = answers.data.length
+				dbJQL.collection("answers")
+				.where(`question_id == '${this._id}'`)
+				.get().then((res) => {
+					console.log(res)
+					this.answers = res.data
+					this.answersCount = res.data.length
+				})
 			},
 
 			changeSort(type) {
@@ -691,5 +711,53 @@
 		width: 85%;
 		max-width: 1200px;
 		max-height: 800px;
+	}
+
+	.image-viewer {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.9);
+		z-index: 999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.movable-area {
+		width: 100%;
+		height: 100%;
+		position: relative;
+	}
+
+	.movable-view {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.preview-image {
+		width: 100%;
+		height: 100%;
+	}
+
+	.close-btn {
+		position: fixed;
+		top: 30rpx;
+		right: 30rpx;
+		width: 60rpx;
+		height: 60rpx;
+		background-color: rgba(255, 255, 255, 0.3);
+		color: #fff;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 40rpx;
+		z-index: 1000;
 	}
 </style>
