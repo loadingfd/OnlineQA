@@ -53,21 +53,16 @@
 			</view>
 
 			<view class="answer-list">
-<!-- 			   <unicloud-db ref="udb" v-slot:default="{data, loading, error, options}" collection="questions,answers" where="_id==question_id">
-			   	<view v-if="error">{{error.message}}</view>
-			   	<view v-else>
-			   		
-			   	</view>
-			   </unicloud-db> -->
+
 			
 			
 			
 			
 				<view v-for="(answer, index) in answers" :key="index" class="answer-item">
 					<view class="answerer-info">
-<!-- 						<image class="avatar" :mode="scaleToFill" :src="answer.user.avatar" mode="aspectFill" />
-						<text class="nickname">{{ answer.user.nickname }}</text> -->
-						<text>{{index+1}}楼</text>
+						<image class="avatar" :mode="scaleToFill" :src="answer.user_id[0].avatar_file.url" mode="aspectFill"  v-if="answer.user_id[0].avatar_file"/>
+						<text class="nickname">{{ answer.user_id[0].nickname }}</text>
+						<text>  {{index+1}}楼</text>
 					</view>
 					<view class="answer-content">
 						<text class="answer-text">{{ answer.content }}</text>
@@ -151,6 +146,7 @@
 				showModal: false,
 				queryWhere: '',
 				collectionList: null,
+				postList: null,
 				usersTmp: null,
 				question: null,
 				loadMore: {
@@ -158,7 +154,7 @@
 					contentrefresh: '',
 					contentnomore: ''
 				},
-				answers: [],
+				answers: null,
 				answersCount: 0,
 				sortBy: 'time',
 				answerContent: '',
@@ -201,12 +197,16 @@
 				})
 			},
 			async getAnswers() {
-				dbJQL.collection("answers")
-				.where(`question_id == '${this._id}'`)
-				.get().then((res) => {
-					console.log(res)
-					this.answers = res.data
-					this.answersCount = res.data.length
+				const answerTmp = db.collection("answers")
+				.where(`question_id == "${this._id}"`)
+				.getTemp()
+				
+					
+				await db.collection(answerTmp, this.usersTmp).get().then((res) => {
+					//console.log(res)
+					this.answers = res.result.data
+				}).catch((err) => {
+					console.log(err)
 				})
 			},
 

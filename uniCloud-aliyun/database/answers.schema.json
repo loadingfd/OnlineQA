@@ -12,40 +12,39 @@
 		"_id": {
 			"description": "ID，系统自动生成"
 		},
-		"content" : {
+		"content": {
 			"bsonType": "string",
 			"description": "回答内容"
 		},
-		"images" : {
+		"images": {
 			"bsonType": "array",
 			"arrayType": "file",
 			"description": "回答图片",
-			"fileMediaType": "image", 
+			"fileMediaType": "image",
 			"fileExtName": "jpg,png", // 扩展名过滤
 			"maxLength": 3 // 限制最大数量
 		},
-		"question_id" : {
+		"question_id": {
 			"bsonType": "string",
 			"description": "回答的问题编号"
 		},
-		"user_id" : {
+		"user_id": {
 			"bsonType": "string",
 			"description": "回答者id",
 			"forceDefaultValue": {
-					 "$env": "uid"
-				}
+				"$env": "uid"
 			},
 			"foreignKey": "uni-id-users._id"
 		},
-		"time" : {
+		"time": {
 			"bsonType": "timestamp",
 			"description": "回答时间"
 		},
-		"parent_id" : {
+		"parent_id": {
 			"bsonType": "string",
 			"description": "想要回复的帖子的id"
 		},
-		"thumbs" : {
+		"thumbs": {
 			"bsonType": "int",
 			"description": "赞数"
 		}
