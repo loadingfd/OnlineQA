@@ -5,7 +5,7 @@
 	"permission": {
 		"read": true,
 		"create": "auth.uid != null",
-		"update": false,
+		"update": true,
 		"delete": false
 	},
 	"properties": {
@@ -47,6 +47,17 @@
 		"thumbs": {
 			"bsonType": "int",
 			"description": "赞数"
-		}
+		},
+		"like_count": {
+			"bsonType": "int",
+			"description": "点赞数量",
+			"defaultValue": 0
+		},
+		"liked_users": {
+            "bsonType": "array",
+            "description": "点赞用户ID列表",
+            "defaultValue": []
+         }
+  
 	}
 }

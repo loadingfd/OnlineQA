@@ -45,25 +45,30 @@
 			<view class="answers-header">
 				<text class="answers-count">{{ answersCount }}个回答</text>
 				<view class="sort-options">
-					<text :class="['sort-item', sortBy === 'time' ? 'active' : '']"
-						@click="changeSort('time')">最新</text>
-					<text :class="['sort-item', sortBy === 'thumbs' ? 'active' : '']"
-						@click="changeSort('thumbs')">最赞</text>
+					<text :class="['sort-item', sortBy === 'time' ? 'active' : '']" @click="changeSort('time')">
+						时间
+						<text v-if="sortBy === 'time'" class="sort-direction">
+							{{ sortDirection === 'desc' ? '↓' : '↑' }}
+						</text>
+					</text>
+					<text :class="['sort-item', sortBy === 'thumbs' ? 'active' : '']" @click="changeSort('thumbs')">
+						赞数
+						<text v-if="sortBy === 'thumbs'" class="sort-direction">
+							{{ sortDirection === 'desc' ? '↓' : '↑' }}
+						</text>
+					</text>
 				</view>
 			</view>
 
 			<view class="answer-list">
-
-			
-			
-			
-			
 				<view v-for="(answer, index) in answers" :key="index" class="answer-item">
 					<view class="answerer-info">
-						<image class="avatar" :mode="scaleToFill" :src="answer.user_id[0].avatar_file.url" mode="aspectFill"  v-if="answer.user_id[0].avatar_file"/>
+						<image class="avatar" :src="answer.user_id[0].avatar_file.url" mode="aspectFill"
+							v-if="answer.user_id[0].avatar_file" />
 						<text class="nickname">{{ answer.user_id[0].nickname }}</text>
-						<text>  {{index+1}}楼</text>
+						<text class="lou"> {{index+1}}楼</text>
 					</view>
+
 					<view class="answer-content">
 						<text class="answer-text">{{ answer.content }}</text>
 						<view class="answer-images" v-if="answer.images && answer.images.length">
@@ -73,8 +78,9 @@
 					</view>
 					<view class="answer-actions">
 						<view class="action-item" @click="likeAnswer(answer)">
-							<uni-icons type="hand-up" size="20" color="#409EFF" />
-							<text>{{ answer.thumbs }}</text>
+							<uni-icons type="hand-up" size="20" :color="isLiked(answer) ? '#007AFF' : '#666'" />
+							<text
+								:style="{ color: isLiked(answer) ? '#007AFF' : '#666' }">{{ answer.like_count || 0 }}</text>
 						</view>
 						<view class="action-item">
 							<uni-icons type="chat" size="20" />
@@ -114,19 +120,9 @@
 
 		<view class="image-viewer" v-if="showModal" @click="recover_photo">
 			<movable-area class="movable-area">
-				<movable-view class="movable-view" 
-					direction="all" 
-					:scale="true"
-					:scale-min="1"
-					:scale-max="4"
-					:scale-value="1"
-					out-of-bounds>
-					<image 
-						:src="large_photo" 
-						class="preview-image"
-						mode="aspectFit"
-						@click.stop
-					/>
+				<movable-view class="movable-view" direction="all" :scale="true" :scale-min="1" :scale-max="4"
+					:scale-value="1" out-of-bounds>
+					<image :src="large_photo" class="preview-image" mode="aspectFit" @click.stop />
 				</movable-view>
 			</movable-area>
 			<view class="close-btn" @click.stop="recover_photo">×</view>
@@ -158,6 +154,7 @@
 				answersCount: 0,
 				sortBy: 'time',
 				answerContent: '',
+				sortDirection: 'desc',
 				selectedImages: [],
 				currentUser: {
 					_id: ''
@@ -167,19 +164,34 @@
 		onLoad(e) {
 			this._id = e.id
 		},
-		onReady() {
+		async onReady() {
 			if (this._id) {
 				this.queryWhere = '_id=="' + this._id + '"'
 				this.question = db.collection('questions').where(`_id=="${this._id}"`).getTemp()
 				this.usersTmp = db.collection('uni-id-users').field('_id,nickname,avatar_file').getTemp()
 				this.collectionList = [this.question, this.usersTmp]
 
-				this.getAnswers()
-				console.log("text")
-				console.log(this.answers)
+				await this.getCurrentUser() // 添加这行
+				await this.getAnswers()
 			}
 		},
 		methods: {
+			async getCurrentUser() {
+				try {
+					const db = uniCloud.database()
+					const userInfo = await db.collection('uni-id-users')
+						.where('_id == $cloudEnv_uid')
+						.field('_id,nickname,avatar_file')
+						.get()
+
+					if (userInfo.result.data.length > 0) {
+						this.currentUser = userInfo.result.data[0]
+					}
+				} catch (error) {
+					console.error('获取用户信息失败:', error)
+				}
+			},
+
 			goBack() {
 				uni.navigateBack()
 			},
@@ -197,22 +209,40 @@
 				})
 			},
 			async getAnswers() {
-				const answerTmp = db.collection("answers")
-				.where(`question_id == "${this._id}"`)
-				.getTemp()
-				
-					
-				await db.collection(answerTmp, this.usersTmp).get().then((res) => {
-					//console.log(res)
-					this.answers = res.result.data
-				}).catch((err) => {
-					console.log(err)
-				})
+				try {
+					const db = uniCloud.database()
+					const answerTmp = db.collection("answers")
+						.where(`question_id == "${this._id}"`)
+						.orderBy(this.getSortField(), this.sortDirection) // 添加排序
+						.getTemp()
+
+					const res = await db.collection(answerTmp, this.usersTmp).get()
+
+					if (res.result.data) {
+						this.answers = res.result.data
+						this.answersCount = this.answers.length
+					}
+				} catch (err) {
+					console.error('获取回答失败:', err)
+				}
 			},
 
-			changeSort(type) {
-				this.sortBy = type
-				this.getAnswers()
+			// 获取排序字段
+			getSortField() {
+				return this.sortBy === 'time' ? 'time' : 'like_count'
+			},
+
+			// 切换排序方式
+			async changeSort(type) {
+				if (this.sortBy === type) {
+					// 如果点击相同的排序方式，切换排序方向
+					this.sortDirection = this.sortDirection === 'desc' ? 'asc' : 'desc'
+				} else {
+					// 切换排序方式时，重置为降序
+					this.sortBy = type
+					this.sortDirection = 'desc'
+				}
+				await this.getAnswers() // 重新获取数据
 			},
 
 			enlarge_photo(file) {
@@ -274,7 +304,7 @@
 					images: imageUrls,
 					thumbs: 0,
 					time: Date.now(),
-					user_id:this.user_id
+					user_id: this.user_id
 				})
 
 				this.getAnswers()
@@ -284,13 +314,60 @@
 				this.$refs.answerPopup.close()
 			},
 
-			async likeAnswer(answer) {
-				const dbAnswer = db.collection('answers').doc(answer._id)
-				await dbAnswer.update({
-					thumbs: db.command.inc(1)
-				})
-				answer.thumbs += 1
+			isLiked(answer) {
+				if (!answer.liked_users) return false;
+				return answer.liked_users.includes(this.currentUser._id);
 			},
+
+			// 处理点赞/取消点赞
+			async likeAnswer(answer) {
+				// 检查用户是否登录
+				if (!this.currentUser._id) {
+					uni.showToast({
+						title: '请先登录',
+						icon: 'none'
+					});
+					return;
+				}
+
+				const db = uniCloud.database();
+				const answersCollection = db.collection('answers');
+
+				try {
+					const isLiked = this.isLiked(answer);
+					const userId = this.currentUser._id;
+
+					if (!isLiked) {
+						// 添加点赞
+						await answersCollection.doc(answer._id).update({
+							like_count: db.command.inc(1),
+							liked_users: db.command.push([userId])
+						});
+
+						// 更新本地数据
+						answer.like_count = (answer.like_count || 0) + 1;
+						if (!answer.liked_users) answer.liked_users = [];
+						answer.liked_users.push(userId);
+					} else {
+						// 取消点赞
+						await answersCollection.doc(answer._id).update({
+							like_count: db.command.inc(-1),
+							liked_users: db.command.pull(userId)
+						});
+
+						// 更新本地数据
+						answer.like_count = Math.max(0, (answer.like_count || 1) - 1);
+						answer.liked_users = answer.liked_users.filter(id => id !== userId);
+					}
+				} catch (error) {
+					console.error('点赞操作失败:', error);
+					uni.showToast({
+						title: '操作失败',
+						icon: 'none'
+					});
+				}
+			},
+
 
 			difficultyClass(difficulty) {
 				return {
@@ -475,6 +552,11 @@
 	.sort-item.active {
 		color: #007AFF;
 		font-weight: bold;
+	}
+
+	.sort-direction {
+		margin-left: 4rpx;
+		font-size: 24rpx;
 	}
 
 	.answer-list {
@@ -759,5 +841,10 @@
 		justify-content: center;
 		font-size: 40rpx;
 		z-index: 1000;
+	}
+
+	.lou {
+		margin-left: auto;
+		font-size: 12px;
 	}
 </style>
