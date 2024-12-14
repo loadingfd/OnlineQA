@@ -46,13 +46,13 @@
 				<text class="answers-count">{{ answersCount }}个回答</text>
 				<view class="sort-options">
 					<text :class="['sort-item', sortBy === 'time' ? 'active' : '']" @click="changeSort('time')">
-						时间
+						最新
 						<text v-if="sortBy === 'time'" class="sort-direction">
 							{{ sortDirection === 'desc' ? '↓' : '↑' }}
 						</text>
 					</text>
 					<text :class="['sort-item', sortBy === 'thumbs' ? 'active' : '']" @click="changeSort('thumbs')">
-						赞数
+						最赞
 						<text v-if="sortBy === 'thumbs'" class="sort-direction">
 							{{ sortDirection === 'desc' ? '↓' : '↑' }}
 						</text>
@@ -76,13 +76,23 @@
 								class="answer-image" />
 						</view>
 					</view>
+					<!-- 回复列表部分 -->
+					<view class="replies-list" v-if="answer.replies && answer.replies.length">
+						<view v-for="(reply, replyIndex) in answer.replies" :key="replyIndex" class="reply-item">
+							<text class="reply-nickname" v-if="reply.reply_to">{{ reply.user_id[0].nickname }}</text>
+							<text class="reply-nickname" v-else> {{ reply.user_id[0].nickname }}：</text>
+							<text class="reply-text" v-if="reply.reply_to">回复 {{ reply.reply_to[0].nickname }}:</text>
+							<text class="reply-content">{{ reply.content }}</text>
+						</view>
+					</view>
+
 					<view class="answer-actions">
 						<view class="action-item" @click="likeAnswer(answer)">
 							<uni-icons type="hand-up" size="20" :color="isLiked(answer) ? '#007AFF' : '#666'" />
 							<text
 								:style="{ color: isLiked(answer) ? '#007AFF' : '#666' }">{{ answer.like_count || 0 }}</text>
 						</view>
-						<view class="action-item">
+						<view class="action-item" @click="handleReply(answer)">
 							<uni-icons type="chat" size="20" />
 							<text>评论</text>
 						</view>
@@ -117,7 +127,16 @@
 				</view>
 			</view>
 		</uni-popup>
-
+		<!-- 添加回复弹出框 -->
+		<uni-popup ref="replyPopup" type="bottom">
+			<view class="reply-popup">
+				<textarea v-model="replyContent" class="reply-textarea" :placeholder="replyPlaceholder"
+					:adjust-position="false" :cursor-spacing="20" :fixed="true" auto-height />
+				<view class="popup-footer">
+					<button class="submit-btn" :disabled="!replyContent" @click="submitReply">发送</button>
+				</view>
+			</view>
+		</uni-popup>
 		<view class="image-viewer" v-if="showModal" @click="recover_photo">
 			<movable-area class="movable-area">
 				<movable-view class="movable-view" direction="all" :scale="true" :scale-min="1" :scale-max="4"
@@ -153,12 +172,15 @@
 				answers: null,
 				answersCount: 0,
 				sortBy: 'time',
-				answerContent: '',
 				sortDirection: 'desc',
+				answerContent: '',
 				selectedImages: [],
 				currentUser: {
 					_id: ''
-				}
+				},
+				replyContent: '',
+				currentReplyTo: null,
+				replyPlaceholder: '写下你的评论...'
 			}
 		},
 		onLoad(e) {
@@ -176,6 +198,61 @@
 			}
 		},
 		methods: {
+			// 处理回复点击
+			handleReply(answer) {
+				this.currentReplyTo = answer
+				this.replyPlaceholder = `回复 ${answer.user_id[0].nickname}`
+				this.$refs.replyPopup.open()
+			},
+
+			// 提交回复
+
+			async submitReply() {
+				if (!this.currentUser._id) {
+					uni.showToast({
+						title: '请先登录',
+						icon: 'none'
+					})
+					return
+				}
+
+				try {
+					const db = uniCloud.database()
+					const answersCollection = db.collection('answers')
+
+					// 创建新回复,添加 reply_to 字段
+					const replyData = {
+						content: this.replyContent,
+						parent_id: this.currentReplyTo._id,
+						user_id: this.currentUser._id,
+						reply_to: this.currentReplyTo.user_id[0]._id, // 添加被回复者的id
+						time: Date.now(),
+						question_id: this._id
+					}
+
+					await answersCollection.add(replyData)
+
+					// 刷新回答列表
+					await this.getAnswers()
+
+					// 清理并关闭弹窗
+					this.replyContent = ''
+					this.currentReplyTo = null
+					this.$refs.replyPopup.close()
+
+					uni.showToast({
+						title: '回复成功',
+						icon: 'none'
+					})
+				} catch (error) {
+					console.error('回复失败:', error)
+					uni.showToast({
+						title: '回复失败',
+						icon: 'none'
+					})
+				}
+			},
+
 			async getCurrentUser() {
 				try {
 					const db = uniCloud.database()
@@ -208,23 +285,50 @@
 					}
 				})
 			},
+			// 修改 getAnswers 方法以包含回复数据和用户信息
 			async getAnswers() {
-				try {
-					const db = uniCloud.database()
-					const answerTmp = db.collection("answers")
-						.where(`question_id == "${this._id}"`)
-						.orderBy(this.getSortField(), this.sortDirection) // 添加排序
-						.getTemp()
-
-					const res = await db.collection(answerTmp, this.usersTmp).get()
-
-					if (res.result.data) {
-						this.answers = res.result.data
-						this.answersCount = this.answers.length
-					}
-				} catch (err) {
-					console.error('获取回答失败:', err)
-				}
+			  try {
+			    const db = uniCloud.database()
+			    // 获取回答
+			    const answerTmp = db.collection("answers")
+			      .where(`question_id == "${this._id}" && parent_id == null`) // 只获取主回答
+			      .orderBy(this.sortBy, this.sortDirection)
+			      .getTemp()
+			
+			    const mainAnswers = await db.collection(answerTmp, this.usersTmp).get()
+			
+			    if (mainAnswers.result.data) {
+			      // 获取每个回答的回复
+			      for (let answer of mainAnswers.result.data) {
+			        const repliesTmp = db.collection('answers')
+			          .where(`parent_id == "${answer._id}"`)
+			          .orderBy('time', 'asc')
+			          .getTemp()
+			          
+			        // 关联用户表获取回复者和被回复者的信息
+			        const replies = await db.collection(repliesTmp, this.usersTmp)
+			          .get()
+			
+			        // 为每个回复获取被回复者的信息
+			        for (let reply of replies.result.data) {
+			          if (reply.reply_to) {
+			            const replyToUser = await db.collection('uni-id-users')
+			              .doc(reply.reply_to)
+			              .field('nickname,avatar_file')
+			              .get()
+			            reply.reply_to = replyToUser.result.data
+			          }
+			        }
+			
+			        answer.replies = replies.result.data
+			      }
+			
+			      this.answers = mainAnswers.result.data
+			      this.answersCount = this.answers.length
+			    }
+			  } catch (err) {
+			    console.error('获取回答失败:', err)
+			  }
 			},
 
 			// 获取排序字段
@@ -846,5 +950,64 @@
 	.lou {
 		margin-left: auto;
 		font-size: 12px;
+	}
+
+
+
+	.reply-user {
+		display: flex;
+		align-items: center;
+		font-size: 24rpx;
+		color: #666;
+		margin-bottom: 4rpx;
+	}
+
+	.replies-list {
+		margin-top: 20rpx;
+		padding-left: 20rpx;
+	}
+
+	.reply-item {
+		margin-bottom: 16rpx;
+		padding: 10rpx;
+		background-color: #f8f8f8;
+		border-radius: 8rpx;
+	}
+
+	.reply-nickname {
+		color: #007AFF;
+		font-size: 24rpx;
+	}
+
+	.reply-text {
+		color: #999;
+		font-size: 24rpx;
+		margin: 0 4rpx;
+	}
+
+	.reply-content {
+		font-size: 26rpx;
+		color: #333;
+	}
+
+	.reply-popup {
+		background-color: #fff;
+		padding: 30rpx;
+		padding-bottom: calc(30rpx + env(safe-area-inset-bottom));
+	}
+
+	.reply-textarea {
+		width: 100%;
+		min-height: 80rpx;
+		padding: 20rpx;
+		font-size: 28rpx;
+		background-color: #f5f5f5;
+		border-radius: 8rpx;
+	}
+
+	.popup-footer {
+		margin-top: 20rpx;
+		display: flex;
+		justify-content: flex-end;
 	}
 </style>

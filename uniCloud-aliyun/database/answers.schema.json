@@ -42,8 +42,12 @@
 		},
 		"parent_id": {
 			"bsonType": "string",
-			"description": "想要回复的帖子的id"
+			"description": "想要回复的评论的id"
 		},
+		"reply_to": {
+			"bsonType": "string",
+			"description": "回复目标用户ID"
+		  },
 		"thumbs": {
 			"bsonType": "int",
 			"description": "赞数"
