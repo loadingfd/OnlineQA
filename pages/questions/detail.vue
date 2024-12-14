@@ -51,9 +51,9 @@
 							{{ sortDirection === 'desc' ? '↓' : '↑' }}
 						</text>
 					</text>
-					<text :class="['sort-item', sortBy === 'thumbs' ? 'active' : '']" @click="changeSort('thumbs')">
+					<text :class="['sort-item', sortBy === 'like_count' ? 'active' : '']" @click="changeSort('like_count')">
 						最赞
-						<text v-if="sortBy === 'thumbs'" class="sort-direction">
+						<text v-if="sortBy === 'like_count'" class="sort-direction">
 							{{ sortDirection === 'desc' ? '↓' : '↑' }}
 						</text>
 					</text>
@@ -63,10 +63,10 @@
 			<view class="answer-list">
 				<view v-for="(answer, index) in answers" :key="index" class="answer-item">
 					<view class="answerer-info">
-						<image class="avatar" :src="answer.user_id[0].avatar_file.url" mode="aspectFill"
-							v-if="answer.user_id[0].avatar_file" />
-						<text class="nickname">{{ answer.user_id[0].nickname }}</text>
-						<text class="lou"> {{index+1}}楼</text>
+						<image class="avatar" :src="answer.user_id.avatar_file.url" mode="aspectFill"
+							v-if="answer.user_id.avatar_file" />
+						<text class="nickname">{{ answer.user_id.nickname }}</text>
+						<text class="timestamp"> {{timestampToDate(answer.time)}}</text>
 					</view>
 
 					<view class="answer-content">
@@ -77,11 +77,11 @@
 						</view>
 					</view>
 					<!-- 回复列表部分 -->
-					<view class="replies-list" v-if="answer.replies && answer.replies.length">
-						<view v-for="(reply, replyIndex) in answer.replies" :key="replyIndex" class="reply-item">
-							<text class="reply-nickname" v-if="reply.reply_to">{{ reply.user_id[0].nickname }}</text>
-							<text class="reply-nickname" v-else> {{ reply.user_id[0].nickname }}：</text>
-							<text class="reply-text" v-if="reply.reply_to">回复 {{ reply.reply_to[0].nickname }}:</text>
+					<view class="replies-list" v-if="answer.children && answer.children.length">
+						<view v-for="(reply, replyIndex) in answer.children" :key="replyIndex" class="reply-item">
+							<text class="reply-nickname" v-if="reply.reply_to">{{ reply.user_id.nickname }}</text>
+							<text class="reply-nickname" v-else> {{ reply.user_id.nickname }}：</text>
+							<text class="reply-text" v-if="reply.reply_to">回复 {{ answer.user_id.nickname }}:</text>
 							<text class="reply-content">{{ reply.content }}</text>
 						</view>
 					</view>
@@ -152,6 +152,7 @@
 
 <script>
 	const db = uniCloud.database()
+	const dbCmd = db.command
 	const dbJQL = uniCloud.databaseForJQL()
 
 	export default {
@@ -186,27 +187,47 @@
 		onLoad(e) {
 			this._id = e.id
 		},
-		async onReady() {
+		onReady() {
 			if (this._id) {
 				this.queryWhere = '_id=="' + this._id + '"'
 				this.question = db.collection('questions').where(`_id=="${this._id}"`).getTemp()
 				this.usersTmp = db.collection('uni-id-users').field('_id,nickname,avatar_file').getTemp()
 				this.collectionList = [this.question, this.usersTmp]
-
-				await this.getCurrentUser() // 添加这行
-				await this.getAnswers()
+				this.getAnswers()
+				this.currentUser._id = uniCloud.getCurrentUserInfo().uid
 			}
 		},
 		methods: {
 			// 处理回复点击
 			handleReply(answer) {
 				this.currentReplyTo = answer
-				this.replyPlaceholder = `回复 ${answer.user_id[0].nickname}`
+				this.replyPlaceholder = `回复 ${answer.user_id.nickname}`
 				this.$refs.replyPopup.open()
 			},
-
-			// 提交回复
-
+			timestampToDate(ts) {
+				if (!ts) return '';
+				const date = new Date(ts);
+				const now = new Date();
+				const diff = now - date;
+				
+				// 小于1分钟
+				if (diff < 60000) {
+					return '刚刚';
+				}
+				// 小于1小时
+				if (diff < 3600000) {
+					return Math.floor(diff / 60000) + '分钟前';
+				}
+				// 小于24小时
+				if (diff < 86400000) {
+					return Math.floor(diff / 3600000) + '小时前';
+				}
+				// 超过1天显示具体日期
+				const year = date.getFullYear();
+				const month = (date.getMonth() + 1).toString().padStart(2, '0');
+				const day = date.getDate().toString().padStart(2, '0');
+				return `${year}-${month}-${day}`;
+			},
 			async submitReply() {
 				if (!this.currentUser._id) {
 					uni.showToast({
@@ -224,9 +245,7 @@
 					const replyData = {
 						content: this.replyContent,
 						parent_id: this.currentReplyTo._id,
-						user_id: this.currentUser._id,
-						reply_to: this.currentReplyTo.user_id[0]._id, // 添加被回复者的id
-						time: Date.now(),
+						reply_to: this.currentReplyTo.user_id._id, // 添加被回复者的id
 						question_id: this._id
 					}
 
@@ -252,23 +271,6 @@
 					})
 				}
 			},
-
-			async getCurrentUser() {
-				try {
-					const db = uniCloud.database()
-					const userInfo = await db.collection('uni-id-users')
-						.where('_id == $cloudEnv_uid')
-						.field('_id,nickname,avatar_file')
-						.get()
-
-					if (userInfo.result.data.length > 0) {
-						this.currentUser = userInfo.result.data[0]
-					}
-				} catch (error) {
-					console.error('获取用户信息失败:', error)
-				}
-			},
-
 			goBack() {
 				uni.navigateBack()
 			},
@@ -287,48 +289,80 @@
 			},
 			// 修改 getAnswers 方法以包含回复数据和用户信息
 			async getAnswers() {
-			  try {
-			    const db = uniCloud.database()
-			    // 获取回答
-			    const answerTmp = db.collection("answers")
-			      .where(`question_id == "${this._id}" && parent_id == null`) // 只获取主回答
-			      .orderBy(this.sortBy, this.sortDirection)
-			      .getTemp()
-			
-			    const mainAnswers = await db.collection(answerTmp, this.usersTmp).get()
-			
-			    if (mainAnswers.result.data) {
-			      // 获取每个回答的回复
-			      for (let answer of mainAnswers.result.data) {
-			        const repliesTmp = db.collection('answers')
-			          .where(`parent_id == "${answer._id}"`)
-			          .orderBy('time', 'asc')
-			          .getTemp()
-			          
-			        // 关联用户表获取回复者和被回复者的信息
-			        const replies = await db.collection(repliesTmp, this.usersTmp)
-			          .get()
-			
-			        // 为每个回复获取被回复者的信息
-			        for (let reply of replies.result.data) {
-			          if (reply.reply_to) {
-			            const replyToUser = await db.collection('uni-id-users')
-			              .doc(reply.reply_to)
-			              .field('nickname,avatar_file')
-			              .get()
-			            reply.reply_to = replyToUser.result.data
-			          }
-			        }
-			
-			        answer.replies = replies.result.data
-			      }
-			
-			      this.answers = mainAnswers.result.data
-			      this.answersCount = this.answers.length
-			    }
-			  } catch (err) {
-			    console.error('获取回答失败:', err)
-			  }
+				try {
+					// 第一步：获取具有树形结构的答案数据
+					let answerTmp = null
+					await db.collection("answers")
+						.where(`question_id == "${this._id}"`)
+						.orderBy(this.sortBy, this.sortDirection)
+						.get({
+							getTree: {
+								limitLevel: 1,
+								startWith: "parent_code=='' || parent_code==null"
+							}
+						}).then(res => {
+							answerTmp = res.result.data
+						})
+
+					answerTmp = answerTmp.filter(item => !(item.parent_id && item.parent_id.length > 0));
+
+
+					// 第二步：提取所有用户 ID
+					const userIds = new Set();
+
+					function extractUserIds(answers) {
+						answers.forEach(answer => {
+							if (answer.user_id && answer.user_id.length > 0) {
+								userIds.add(answer.user_id);
+							}
+						});
+					}
+					extractUserIds(answerTmp);
+					//console.log(userIds)
+
+					// 第三步：查询所有相关的用户信息
+					let userInfo = null
+					await db.collection('uni-id-users')
+						.where({
+							_id: dbCmd.in([...userIds])
+						})
+						.field('_id, nickname, avatar_file')
+						.get().then(res => {
+							userInfo = res.result.data
+							//console.log(userInfo)
+						});
+					//console.log(userInfo)
+					// 创建用户信息的映射表
+					const userMap = {};
+					userInfo.forEach(user => {
+						userMap[user._id] = user;
+					});
+					//console.log(userMap)
+					//console.log(answerTmp)
+					// 第四步：将用户信息合并到答案数据中
+					function attachUserInfo(answers) {
+						answers.forEach(answer => {
+							if (answer.user_id && answer.user_id.length > 0) {
+								answer.user_id = userMap[answer.user_id]
+							}
+							if (answer.children && answer.children.length > 0) {
+								answer.children.forEach(reply => {
+									if (reply.user_id && reply.user_id.length > 0) {
+										reply.user_id = userMap[reply.user_id]
+									}
+								});
+							}
+						});
+					}
+					attachUserInfo(answerTmp);
+					//console.log(answerTmp)
+
+					// // 更新组件数据
+					this.answers = answerTmp;
+					this.answersCount = answerTmp.length; // 假设 total 表示回答总数
+				} catch (error) {
+					console.error('获取回答失败:', error);
+				}
 			},
 
 			// 获取排序字段
@@ -361,7 +395,7 @@
 			async chooseImage() {
 				if (this.selectedImages.length >= 3) {
 					uni.showToast({
-						title: '最多只能选择3张图片',
+						title: '最��只能选择3张图片',
 						icon: 'none'
 					});
 					return;
@@ -406,8 +440,6 @@
 					question_id: this._id,
 					content: this.answerContent,
 					images: imageUrls,
-					thumbs: 0,
-					time: Date.now(),
 					user_id: this.user_id
 				})
 
@@ -434,35 +466,41 @@
 					return;
 				}
 
-				const db = uniCloud.database();
-				const answersCollection = db.collection('answers');
-
 				try {
+					const db = uniCloud.database();
+					const answersCollection = db.collection('answers');
 					const isLiked = this.isLiked(answer);
 					const userId = this.currentUser._id;
 
+					// 准备更新数据
+					let updateData = {};
 					if (!isLiked) {
 						// 添加点赞
-						await answersCollection.doc(answer._id).update({
-							like_count: db.command.inc(1),
-							liked_users: db.command.push([userId])
-						});
-
-						// 更新本地数据
-						answer.like_count = (answer.like_count || 0) + 1;
-						if (!answer.liked_users) answer.liked_users = [];
-						answer.liked_users.push(userId);
+						updateData = {
+							like_count: (answer.like_count || 0) + 1,
+							liked_users: answer.liked_users ? [...answer.liked_users, userId] : [userId]
+						};
 					} else {
 						// 取消点赞
-						await answersCollection.doc(answer._id).update({
-							like_count: db.command.inc(-1),
-							liked_users: db.command.pull(userId)
-						});
-
-						// 更新本地数据
-						answer.like_count = Math.max(0, (answer.like_count || 1) - 1);
-						answer.liked_users = answer.liked_users.filter(id => id !== userId);
+						updateData = {
+							like_count: Math.max(0, (answer.like_count || 1) - 1),
+							liked_users: (answer.liked_users || []).filter(id => id !== userId)
+						};
 					}
+
+					// 更新数据库
+					await answersCollection.doc(answer._id).update(updateData);
+
+					// 更新本地数据
+					answer.like_count = updateData.like_count;
+					answer.liked_users = updateData.liked_users;
+
+					// 显示操作结果
+					uni.showToast({
+						title: isLiked ? '已取消点赞' : '点赞成功',
+						icon: 'none'
+					});
+
 				} catch (error) {
 					console.error('点赞操作失败:', error);
 					uni.showToast({
@@ -947,7 +985,7 @@
 		z-index: 1000;
 	}
 
-	.lou {
+	.timestamp {
 		margin-left: auto;
 		font-size: 12px;
 	}

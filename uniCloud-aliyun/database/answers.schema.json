@@ -38,20 +38,20 @@
 		},
 		"time": {
 			"bsonType": "timestamp",
-			"description": "回答时间"
+			"description": "回答时间",
+			"forceDefaultValue" : {
+				"$env": "now"
+			}
 		},
 		"parent_id": {
 			"bsonType": "string",
-			"description": "想要回复的评论的id"
+			"description": "想要回复的评论的id",
+			"parentKey": "_id"
 		},
 		"reply_to": {
 			"bsonType": "string",
 			"description": "回复目标用户ID"
 		  },
-		"thumbs": {
-			"bsonType": "int",
-			"description": "赞数"
-		},
 		"like_count": {
 			"bsonType": "int",
 			"description": "点赞数量",
