@@ -70,14 +70,13 @@
                         <text class="nickname">{{ answer.user_id.nickname }}</text>
                         <text class="timestamp"> {{ timestampToDate(answer.time) }}</text>
                     </view>
-
                     <view class="answer-content">
                         <text class="answer-text">{{ answer.content }}</text>
                         <view class="answer-images" v-if="answer.images && answer.images.length">
                             <image v-for="(img, i) in answer.images" :key="i" :src="img.url" @click="enlarge_photo(img)"
                                 mode="aspectFill" class="answer-image" />
                         </view>
-                        <img v-if="answer.user_id._id === question.best_answer_user_id" src="/static/Qpic/BA.png"
+                        <img v-if="answer.user_id._id === best_answer_user_id" src="/static/Qpic/BA.png"
                             alt="最佳答案" class="best-answer-icon" />
                     </view>
                     <!-- 回复列表部分 -->
@@ -107,6 +106,10 @@
                             <uni-icons type="chat" size="20" />
                             <text>评论</text>
                         </view>
+						<view v-if="currentUser._id == question_user_id && !solved  && question_user_id != answer.user_id._id" @click="acceptAnswer(answer)"> 
+							<uni-icons type="checkmarkempty"></uni-icons>
+							采纳
+						</view>
                     </view>
                 </view>
             </view>
@@ -190,9 +193,12 @@ export default {
             currentUser: {
                 _id: ''
             },
+			best_answer_user_id: null,
+			question_user_id: null,
             replyContent: '',
             currentReplyTo: null,
-            replyPlaceholder: '写下你的评论...'
+            replyPlaceholder: '写下你的评论...',
+			solved : false
         }
     },
     onLoad(e) {
@@ -206,6 +212,13 @@ export default {
             this.collectionList = [this.question, this.usersTmp]
             this.getAnswers()
             this.currentUser._id = uniCloud.getCurrentUserInfo().uid
+			db.collection('questions').where(`_id=="${this._id}"`).get().then(res=> {
+				this.question_user_id = res.result.data[0].user_id
+				this.solved = res.result.data[0].had_answer
+				if(this.solved) {
+					this.best_answer_user_id = res.result.data[0].best_answer_user_id
+				}
+			})
         }
     },
     methods: {
@@ -217,6 +230,7 @@ export default {
             }
             else
                 this.replyPlaceholder = `回复 ${answer.user_id.nickname}`;
+				
             this.$refs.replyPopup.open()
         },
 
@@ -595,6 +609,14 @@ export default {
 
         deleteImage(index) {
             this.selectedImages.splice(index, 1);
+        },
+		acceptAnswer(answer){
+            db.collection('questions').where(`_id=="${this._id}"`).update({
+                best_answer_user_id: answer.user_id._id,
+                had_answer: true
+            })
+            this.getAnswers()
+            this.solved = true
         }
     }
 }
@@ -785,6 +807,7 @@ export default {
 
 .answer-content {
     margin: 20rpx 0;
+    position: relative;
 }
 
 .answer-text {
@@ -1112,8 +1135,8 @@ export default {
 
 .best-answer-icon {
     position: absolute;
-    top: 20rpx;
-    right: 20rpx;
+    top: 10rpx;
+    right: 10rpx;
     height: 80rpx;
 }
 </style>
