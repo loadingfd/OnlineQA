@@ -185,7 +185,8 @@ export default {
             replyContent: '',
             currentReplyTo: null,
             replyPlaceholder: '写下你的评论...',
-            solved: false
+            solved: false,
+			qhard: -1
         }
     },
     onLoad(e) {
@@ -201,6 +202,7 @@ export default {
             this.currentUser._id = uniCloud.getCurrentUserInfo().uid
             db.collection('questions').where(`_id=="${this._id}"`).get().then(res => {
                 this.question_user_id = res.result.data[0].user_id
+				this.qhard = res.result.data[0].difficulties
                 this.solved = res.result.data[0].had_answer
                 if (this.solved) {
                     this.best_answer_user_id = res.result.data[0].best_answer_user_id
@@ -606,6 +608,27 @@ export default {
             this.getAnswers()
             this.solved = true
             this.best_answer_user_id = answer.user_id._id
+			let wordrecord = {
+				"question_id": this._id,
+				"que_user_id": this.question_user_id,
+				"ans_user_id": answer.user_id._id,
+				"difficulties": this.qhard
+			}
+			db.collection('manhour').add(wordrecord)
+			let bworkhour = 0
+			db.collection("uni-id-users").where(`_id == "${answer.user_id._id}"`).field("workhour").get()
+			.then(res=>{
+				bworkhour = res.result.data[0].workhour
+				console.log(bworkhour)
+			})
+			const durations = {
+				0: 5,
+				1: 10,
+				2: 15
+			}
+			db.collection("uni-id-users").where(`_id == "${answer.user_id._id}"`).update({
+				"workhour" : bworkhour + durations[this.qhard] || bworkhour
+			})
         }
     }
 }

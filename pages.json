@@ -1,13 +1,5 @@
 {
-	"pages": [{
-			"path": "pages/list/list",
-			"style": {
-				// #ifndef APP
-				"enablePullDownRefresh": true,
-				// #endif
-				"navigationStyle": "custom"
-			}
-		},
+	"pages": [
 		{
 			"path": "pages/grid/grid",
 			"style": {
@@ -124,6 +116,13 @@
 			"style": {
 				"navigationBarTitleText": "详情"
 			}
+		},
+		{
+			"path" : "pages/manhours/manhours",
+			"style" : 
+			{
+				"navigationBarTitleText" : ""
+			}
 		}
 	],
 	"subPackages": [{
@@ -239,7 +238,7 @@
 		"list": [{
 				"path": "pages/list/detail"
 			}, {
-				"path": "pages/list/list"
+				"path": "pages/questions/list"
 			},
 			{
 				"path": "pages/ucenter/settings/settings"

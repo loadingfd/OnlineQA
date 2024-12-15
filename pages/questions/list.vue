@@ -19,7 +19,7 @@
 							<view class="user-info">
 								<view class="avatar-container">
 									<image class="avatar" mode="aspectFill" :src="item.user_id[0].avatar_file.url" />
-									<text class="nickname">{{ item.user_id[0].nickname }}</text>
+									<text class="nickname" >{{ item.user_id[0].nickname }}</text>
 								</view>
 							</view>
 						</template>
@@ -183,7 +183,7 @@
 	}
 
 	.user-info {
-		display: flex;
+		width: 100rpx;
 		padding: 15rpx;
 		margin-right: 15rpx;
 		margin-bottom: 10rpx;
@@ -205,9 +205,14 @@
 	}
 
 	.nickname {
-		font-size: 28rpx;
+		font-size: 20rpx;
+		width: 140rpx;
 		color: #666;
 		text-align: center;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		
 	}
 
 	.question-content {

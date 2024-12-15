@@ -21,7 +21,7 @@
 		</uni-grid>
 
 		<uni-list class="center-list" v-for="(sublist , index) in ucenterList" :key="index" extraIcon="'compose'" :show-extra-icon="true">
-			<uni-list-item 	v-if="uniIDHasRole('MANAGER') && index == 0" title="管理" :show-extra-icon="true" :extra-icon="{type:'settings',color:'#999'}">
+			<uni-list-item 	v-if="uniIDHasRole('MANAGER') && index == 0" title="管理" :show-extra-icon="true" :extra-icon="{type:'setting',color:'#999'}">
 				
 			</uni-list-item>
 			<uni-list-item v-for="(item,i) in sublist" :title="item.title" link :rightText="item.rightText" :key="i"

@@ -4,7 +4,7 @@
 	"required": [],
 	"permission": {
 		"read": true,
-		"create": "auth.uid == doc.que_user_id",
+		"create": "auth.uid != null",
 		"update": false,
 		"delete": false
 	},
@@ -14,11 +14,13 @@
 		},
 		"question_id": {
 			"bsonType": "string",
-			"description": "问题id"
+			"description": "问题id",
+			"foreignKey": "questions._id"
 		},
 		"que_user_id": {
 			"bsonType": "string",
-			"description": "提问者id"
+			"description": "提问者id",
+			"foreignKey": "uni-id-users._id"
 		},
 		"ans_user_id": {
 			"bsonType": "string",
