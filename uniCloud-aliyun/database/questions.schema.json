@@ -5,7 +5,7 @@
 	"permission": {
 		"read": true,
 		"create": "auth.uid != null",
-		"update": "auth.uid == doc.user_id",
+		"update": "auth.uid == doc.user_id || 'MANAGER' in auth.role",
 		"delete": false
 	},
 	"properties": {

@@ -121,7 +121,14 @@
 			"path" : "pages/manhours/manhours",
 			"style" : 
 			{
-				"navigationBarTitleText" : ""
+				"navigationBarTitleText" : "工时"
+			}
+		},
+		{
+			"path" : "pages/manager/manager",
+			"style" : 
+			{
+				"navigationBarTitleText" : "管理"
 			}
 		}
 	],
