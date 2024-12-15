@@ -51,7 +51,8 @@
 							{{ sortDirection === 'desc' ? '↓' : '↑' }}
 						</text>
 					</text>
-					<text :class="['sort-item', sortBy === 'like_count' ? 'active' : '']" @click="changeSort('like_count')">
+					<text :class="['sort-item', sortBy === 'like_count' ? 'active' : '']"
+						@click="changeSort('like_count')">
 						最赞
 						<text v-if="sortBy === 'like_count'" class="sort-direction">
 							{{ sortDirection === 'desc' ? '↓' : '↑' }}
@@ -78,11 +79,17 @@
 					</view>
 					<!-- 回复列表部分 -->
 					<view class="replies-list" v-if="answer.children && answer.children.length">
-						<view v-for="(reply, replyIndex) in answer.children" :key="replyIndex" class="reply-item">
-							<text class="reply-nickname" v-if="reply.reply_to">{{ reply.user_id.nickname }}</text>
-							<text class="reply-nickname" v-else> {{ reply.user_id.nickname }}：</text>
-							<text class="reply-text" v-if="reply.reply_to">回复 {{ answer.user_id.nickname }}:</text>
+						<view v-for="(reply, replyIndex) in answer.children" :key="replyIndex" class="reply-item"
+							@click="handleReplyClick(reply)">
+							
+							 <text class="reply-nickname" v-if="reply.reply_to && reply.reply_to._id === currentUser._id">
+								{{ reply.user_id.nickname || 游客}} :
+							</text>
+							<text class="reply-nickname" v-else >
+								{{ reply.user_id.nickname || 游客}} 回复 {{ reply.reply_to.nickname || 游客 }}:
+							</text> 
 							<text class="reply-content">{{ reply.content }}</text>
+
 						</view>
 					</view>
 
@@ -201,15 +208,29 @@
 			// 处理回复点击
 			handleReply(answer) {
 				this.currentReplyTo = answer
-				this.replyPlaceholder = `回复 ${answer.user_id.nickname}`
+				 if (answer.user_id._id === this.currentUser._id) {
+				            this.replyPlaceholder = '说点什么';
+				        } 
+				else
+				this.replyPlaceholder = `回复 ${answer.user_id.nickname}`;
 				this.$refs.replyPopup.open()
+			},
+
+			handleReplyClick(reply) {
+				this.currentReplyTo = reply;
+				if (reply.reply_to && reply.reply_to._id === this.currentUser._id) {
+				            this.replyPlaceholder = '说点什么';
+				        }
+				else
+				this.replyPlaceholder = `回复 ${reply.user_id.nickname}`;
+				this.$refs.replyPopup.open();
 			},
 			timestampToDate(ts) {
 				if (!ts) return '';
 				const date = new Date(ts);
 				const now = new Date();
 				const diff = now - date;
-				
+
 				// 小于1分钟
 				if (diff < 60000) {
 					return '刚刚';
@@ -240,11 +261,15 @@
 				try {
 					const db = uniCloud.database()
 					const answersCollection = db.collection('answers')
-
+					let parentId = this.currentReplyTo._id;
+					if (this.currentReplyTo.parent_id) {
+						// 如果当前回复是对另一个回复的回复，则使用其父级评论的parent_id
+						parentId = this.currentReplyTo.parent_id;
+					}
 					// 创建新回复,添加 reply_to 字段
 					const replyData = {
 						content: this.replyContent,
-						parent_id: this.currentReplyTo._id,
+						parent_id: parentId,
 						reply_to: this.currentReplyTo.user_id._id, // 添加被回复者的id
 						question_id: this._id
 					}
@@ -290,24 +315,37 @@
 			// 修改 getAnswers 方法以包含回复数据和用户信息
 			async getAnswers() {
 				try {
-					// 第一步：获取具有树形结构的答案数据
-					let answerTmp = null
+					// 获取答案数据
+					let answerTmp = null;
 					await db.collection("answers")
 						.where(`question_id == "${this._id}"`)
 						.orderBy(this.sortBy, this.sortDirection)
-						.get({
-							getTree: {
-								limitLevel: 1,
-								startWith: "parent_code=='' || parent_code==null"
+						.get().then(res => {
+							answerTmp = res.result.data;
+						});
+
+
+
+					// 手动构建嵌套结构
+					const answerMap = {};
+					answerTmp.forEach(answer => {
+						answer.children = [];
+						answerMap[answer._id] = answer;
+					});
+
+					const rootAnswers = [];
+					answerTmp.forEach(answer => {
+						if (answer.parent_id) {
+							if (answerMap[answer.parent_id]) {
+								answerMap[answer.parent_id].children.push(answer);
 							}
-						}).then(res => {
-							answerTmp = res.result.data
-						})
+						} else {
+							rootAnswers.push(answer);
+						}
+					});
 
-					answerTmp = answerTmp.filter(item => !(item.parent_id && item.parent_id.length > 0));
 
-
-					// 第二步：提取所有用户 ID
+					// 提取所有用户 ID，包括 reply_to 字段
 					const userIds = new Set();
 
 					function extractUserIds(answers) {
@@ -315,51 +353,63 @@
 							if (answer.user_id && answer.user_id.length > 0) {
 								userIds.add(answer.user_id);
 							}
+							if (answer.children && answer.children.length > 0) {
+								answer.children.forEach(reply => {
+									if (reply.user_id && reply.user_id.length > 0) {
+										userIds.add(reply.user_id);
+									}
+									if (reply.reply_to && reply.reply_to.length > 0) {
+										userIds.add(reply.reply_to);
+									}
+								});
+							}
 						});
 					}
-					extractUserIds(answerTmp);
-					//console.log(userIds)
+					extractUserIds(rootAnswers);
 
-					// 第三步：查询所有相关的用户信息
-					let userInfo = null
+					// 查询所有相关的用户信息
+					let userInfo = null;
 					await db.collection('uni-id-users')
 						.where({
 							_id: dbCmd.in([...userIds])
 						})
 						.field('_id, nickname, avatar_file')
 						.get().then(res => {
-							userInfo = res.result.data
-							//console.log(userInfo)
+							userInfo = res.result.data;
 						});
-					//console.log(userInfo)
+
+
+
 					// 创建用户信息的映射表
 					const userMap = {};
 					userInfo.forEach(user => {
 						userMap[user._id] = user;
 					});
-					//console.log(userMap)
-					//console.log(answerTmp)
-					// 第四步：将用户信息合并到答案数据中
+
+					// 将用户信息合并到答案数据中
 					function attachUserInfo(answers) {
 						answers.forEach(answer => {
 							if (answer.user_id && answer.user_id.length > 0) {
-								answer.user_id = userMap[answer.user_id]
+								answer.user_id = userMap[answer.user_id];
 							}
 							if (answer.children && answer.children.length > 0) {
 								answer.children.forEach(reply => {
 									if (reply.user_id && reply.user_id.length > 0) {
-										reply.user_id = userMap[reply.user_id]
+										reply.user_id = userMap[reply.user_id];
+									}
+									if (reply.reply_to && reply.reply_to.length > 0) {
+										reply.reply_to = userMap[reply.reply_to];
 									}
 								});
 							}
 						});
 					}
-					attachUserInfo(answerTmp);
-					//console.log(answerTmp)
+					attachUserInfo(rootAnswers);
 
-					// // 更新组件数据
-					this.answers = answerTmp;
-					this.answersCount = answerTmp.length; // 假设 total 表示回答总数
+
+					// 更新组件数据
+					this.answers = rootAnswers;
+					this.answersCount = rootAnswers.length;
 				} catch (error) {
 					console.error('获取回答失败:', error);
 				}
