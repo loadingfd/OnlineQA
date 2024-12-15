@@ -21,7 +21,7 @@
                     <view class="question-content">
                         <text class="title">{{ data.title }}</text>
                         <text class="description">{{ data.descrip }}</text>
-                        <img v-if="data.had_answer" src="/static/Qpic/SV.png" alt="已解决" class="resolved-icon" />
+                        <img v-if="solved" src="/static/Qpic/SV.png" alt="已解决" class="resolved-icon" />
                     </view>
                     <view>
                         <template v-for="(file, j) in data.images">
@@ -617,6 +617,7 @@ export default {
             })
             this.getAnswers()
             this.solved = true
+			this.best_answer_user_id = answer.user_id._id
         }
     }
 }
