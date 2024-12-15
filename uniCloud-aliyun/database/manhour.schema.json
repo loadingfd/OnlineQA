@@ -1,0 +1,51 @@
+// 文档教程: https://uniapp.dcloud.net.cn/uniCloud/schema
+{
+	"bsonType": "object",
+	"required": [],
+	"permission": {
+		"read": true,
+		"create": "auth.uid == doc.que_user_id",
+		"update": false,
+		"delete": false
+	},
+	"properties": {
+		"_id": {
+			"description": "ID，系统自动生成"
+		},
+		"question_id": {
+			"bsonType": "string",
+			"description": "问题id"
+		},
+		"que_user_id": {
+			"bsonType": "string",
+			"description": "提问者id"
+		},
+		"ans_user_id": {
+			"bsonType": "string",
+			"description": "回答者id"
+		},
+		"difficulties": {
+			"bsonType": "int",
+			"enum": [{
+					"text": "简单",
+					"value": 0
+				},
+				{
+					"text": "中等",
+					"value": 1
+				},
+				{
+					"text": "困难",
+					"value": 2
+				}
+			],
+			"label": "难度"
+		},
+		"time" : {
+			"bsonType": "timestamp",
+			"forceDefaultValue": {
+				"$env": "now"
+			}
+		}
+	}
+}
