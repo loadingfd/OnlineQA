@@ -13,16 +13,21 @@
 				<text class="uer-name" v-else>{{$t('mine.notLogged')}}</text>
 			</view>
 		</view>
-		<uni-grid class="grid" :column="4" :showBorder="false" :square="true">
+		<uni-grid class="grid" :column="3" :showBorder="false" :square="true">
 			<uni-grid-item class="item" v-for="(item,index) in gridList" @click.native="tapGrid(index)" :key="index">
-				<uni-icons class="icon" color="#007AFF" :type="item.icon" size="26"></uni-icons>
+				<uni-icons class="icon" color="#007AFF" :type="item.icon" size="30"></uni-icons>
 				<text class="text">{{item.text}}</text>
 			</uni-grid-item>
 		</uni-grid>
-		<uni-list class="center-list" v-for="(sublist , index) in ucenterList" :key="index">
+
+		<uni-list class="center-list" v-for="(sublist , index) in ucenterList" :key="index" extraIcon="'compose'" :show-extra-icon="true">
+			<uni-list-item 	v-if="uniIDHasRole('MANAGER') && index == 0" title="管理" :show-extra-icon="true" :extra-icon="{type:'settings',color:'#999'}">
+				
+			</uni-list-item>
 			<uni-list-item v-for="(item,i) in sublist" :title="item.title" link :rightText="item.rightText" :key="i"
 				:clickable="true" :to="item.to" @click="ucenterListClick(item)" :show-extra-icon="true"
 				:extraIcon="{type:item.icon,color:'#999'}">
+				
 				<template v-slot:footer>
 					<view v-if="item.showBadge" class="item-footer">
 						<text class="item-footer-text">{{item.rightText}}</text>
@@ -60,43 +65,25 @@
 		data() {
 			return {
 				gridList: [{
-						"text": this.$t('mine.showText'),
+						"text": "未读信息",
 						"icon": "chat"
 					},
 					{
-						"text": this.$t('mine.showText'),
+						"text": "我的问题",
 						"icon": "cloud-upload"
 					},
 					{
-						"text": this.$t('mine.showText'),
-						"icon": "contact"
-					},
-					{
-						"text": this.$t('mine.showText'),
+						"text": "工时记录",
 						"icon": "download"
 					}
 				],
 				ucenterList: [
 					[
-						// #ifdef APP
-						{
-							"title": this.$t('mine.signInByAd'),
-							"event": 'signInByAd',
-							"icon": "compose"
-						},
-						// #endif
 						{
 							"title": this.$t('mine.signIn'),
 							"event": 'signIn',
 							"icon": "compose"
 						},
-						// #ifdef APP-PLUS
-						{
-							"title": this.$t('mine.toEvaluate'),
-							"event": 'gotoMarket',
-							"icon": "star"
-						},
-						//#endif
 						{
 							"title":this.$t('mine.readArticles'),
 							"to": '/pages/ucenter/read-news-log/read-news-log',
@@ -108,13 +95,6 @@
 							"event": 'getScore',
 							"icon": "paperplane"
 						}
-						// #ifdef APP
-						, {
-							"title": this.$t('mine.invite'),
-							"event": 'share',
-							"icon": "redo"
-						}
-						// #endif
 					],
 					[{
 						"title": this.$t('mine.feedback'),

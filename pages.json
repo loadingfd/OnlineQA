@@ -104,31 +104,28 @@
 			}
 		}
 		// #endif
-	,{
-    "path": "pages/questions/add",
-    "style": {
-        "navigationBarTitleText": "新增"
-    }
-}
-,{
-    "path": "pages/questions/edit",
-    "style": {
-        "navigationBarTitleText": "编辑"
-    }
-}
-,{
-    "path": "pages/questions/list",
-    "style": {
-        "navigationBarTitleText": "列表"
-    }
-}
-,{
-    "path": "pages/questions/detail",
-    "style": {
-        "navigationBarTitleText": "详情"
-    }
-}
-],
+		, {
+			"path": "pages/questions/add",
+			"style": {
+				"navigationBarTitleText": "新增"
+			}
+		}, {
+			"path": "pages/questions/edit",
+			"style": {
+				"navigationBarTitleText": "编辑"
+			}
+		}, {
+			"path": "pages/questions/list",
+			"style": {
+				"navigationBarTitleText": "列表"
+			}
+		}, {
+			"path": "pages/questions/detail",
+			"style": {
+				"navigationBarTitleText": "详情"
+			}
+		}
+	],
 	"subPackages": [{
 			"root": "uni_modules/uni-feedback",
 			"pages": [{
@@ -219,19 +216,6 @@
 						"navigationBarTitleText": "设置密码"
 					}
 				}
-				// #ifdef H5
-				,
-				{
-					"path": "userinfo/cropImage/cropImage"
-				},
-				{
-					"path": "register/register-admin",
-					"style": {
-						"enablePullDownRefresh": false,
-						"navigationBarTitleText": "注册管理员账号"
-					}
-				}
-				// #endif
 			]
 		}
 	],
