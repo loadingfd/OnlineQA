@@ -82,7 +82,7 @@
 						<view v-for="(reply, replyIndex) in answer.children" :key="replyIndex" class="reply-item"
 							@click="handleReplyClick(reply)">
 							
-							 <text class="reply-nickname" v-if="reply.reply_to && reply.reply_to._id === currentUser._id">
+							 <text class="reply-nickname" v-if="reply.reply_to && reply.reply_to._id === reply.user_id._id">
 								{{ reply.user_id.nickname || 游客}} :
 							</text>
 							<text class="reply-nickname" v-else >
