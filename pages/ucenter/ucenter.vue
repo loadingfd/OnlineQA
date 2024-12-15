@@ -21,7 +21,7 @@
 		</uni-grid>
 
 		<uni-list class="center-list" v-for="(sublist , index) in ucenterList" :key="index" extraIcon="'compose'" :show-extra-icon="true">
-			<uni-list-item 	v-if="uniIDHasRole('MANAGER') && index == 0" title="管理" :show-extra-icon="true" :extra-icon="{type:'setting',color:'#999'}">
+			<uni-list-item 	v-if="uniIDHasRole('MANAGER') && index == 0" title="管理" :show-extra-icon="true" :extra-icon="{type:'list',color:'#999'}">
 				
 			</uni-list-item>
 			<uni-list-item v-for="(item,i) in sublist" :title="item.title" link :rightText="item.rightText" :key="i"
@@ -160,12 +160,6 @@
 					url: "/pages/ucenter/settings/settings"
 				})
 			},
-			signIn() { //普通签到
-				this.$refs.signIn.open()
-			},
-			signInByAd(){ //看激励视频广告签到
-				this.$refs.signIn.showRewardedVideoAd()
-			},
 			/**
 			 * 个人中心项目列表点击事件
 			 */
@@ -192,11 +186,11 @@
 				})
 			},
 			tapGrid(index) {
-				uni.showToast({
-					// title: '你点击了，第' + (index + 1) + '个',
-					title: this.$t('mine.clicked') + " " + (index + 1) ,
-					icon: 'none'
-				});
+				if(index == 2) {
+					uni.navigateTo({
+						url: "/pages/manhours/manhours"
+					})
+				}
 			},
 			/**
 			 * 去应用市场评分

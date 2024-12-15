@@ -618,8 +618,10 @@ export default {
 			let bworkhour = 0
 			db.collection("uni-id-users").where(`_id == "${answer.user_id._id}"`).field("workhour").get()
 			.then(res=>{
-				bworkhour = res.result.data[0].workhour
-				console.log(bworkhour)
+				if(res.result.data[0].workhour){
+					bworkhour = res.result.data[0].workhour
+				}
+					
 			})
 			const durations = {
 				0: 5,

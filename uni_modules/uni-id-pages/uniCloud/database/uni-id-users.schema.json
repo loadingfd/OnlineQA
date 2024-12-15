@@ -3,7 +3,7 @@
 	"permission": {
 		"read": true,
 		"create": "'CREATE_UNI_ID_USERS' in auth.permission",
-		"update": "doc._id == auth.uid || 'UPDATE_UNI_ID_USERS' in auth.permission",
+		"update": "auth.uid != null",
 		"delete": "'DELETE_UNI_ID_USERS' in auth.permission"
 	},
 	"properties": {
@@ -343,9 +343,10 @@
 			"bsonType": "int",
 			"description": "志愿工时",
 			"permission": {
-				"read": "doc._id == auth.uid || 'READ_UNI_ID_USERS' in auth.permission || 'MANAGER' in auth.role",
+				"read": "auth.uid != null",
 				"write": "auth.uid != null"
-			}
+			},
+			"defaultValue": 0
 		},
 		"status": {
 			"bsonType": "int",
