@@ -25,12 +25,8 @@
                     </view>
                     <view>
                         <template v-for="(file, j) in data.images">
-                            <image @click="enlarge_photo(file)" class="post-image" :src="file.url"
+                            <image @click="enlarge_photo(data.images, j)" class="post-image" :src="file.url"
                                 v-if="file.fileType === 'image'" />
-                            <div class="largephoto" v-if="showModal">
-                                <span class="closelargeimage" @click="recover_photo()">&times;</span>
-                                <image class="largeimage" :src="large_photo" />
-                            </div>
                         </template>
                     </view>
                     <view class="tags">
@@ -73,11 +69,11 @@
                     <view class="answer-content">
                         <text class="answer-text">{{ answer.content }}</text>
                         <view class="answer-images" v-if="answer.images && answer.images.length">
-                            <image v-for="(img, i) in answer.images" :key="i" :src="img.url" @click="enlarge_photo(img)"
+                            <image v-for="(img, i) in answer.images" :key="i" :src="img.url" @click="enlarge_photo(answer.images, i)"
                                 mode="aspectFill" class="answer-image" />
                         </view>
-                        <img v-if="answer.user_id._id === best_answer_user_id" src="/static/Qpic/BA.png"
-                            alt="最佳答案" class="best-answer-icon" />
+                        <img v-if="answer.user_id._id === best_answer_user_id" src="/static/Qpic/BA.png" alt="最佳答案"
+                            class="best-answer-icon" />
                     </view>
                     <!-- 回复列表部分 -->
                     <view class="replies-list" v-if="answer.children && answer.children.length">
@@ -106,10 +102,12 @@
                             <uni-icons type="chat" size="20" />
                             <text>评论</text>
                         </view>
-						<view v-if="currentUser._id == question_user_id && !solved  && question_user_id != answer.user_id._id" @click="acceptAnswer(answer)"> 
-							<uni-icons type="checkmarkempty"></uni-icons>
-							采纳
-						</view>
+                        <view
+                            v-if="currentUser._id == question_user_id && !solved && question_user_id != answer.user_id._id"
+                            @click="acceptAnswer(answer)">
+                            <uni-icons type="checkmarkempty"></uni-icons>
+                            采纳
+                        </view>
                     </view>
                 </view>
             </view>
@@ -151,15 +149,6 @@
                 </view>
             </view>
         </uni-popup>
-        <view class="image-viewer" v-if="showModal" @click="recover_photo">
-            <movable-area class="movable-area">
-                <movable-view class="movable-view" direction="all" :scale="true" :scale-min="1" :scale-max="4"
-                    :scale-value="1" out-of-bounds>
-                    <image :src="large_photo" class="preview-image" mode="aspectFit" @click.stop />
-                </movable-view>
-            </movable-area>
-            <view class="close-btn" @click.stop="recover_photo">×</view>
-        </view>
     </view>
 </template>
 
@@ -172,8 +161,6 @@ const dbJQL = uniCloud.databaseForJQL()
 export default {
     data() {
         return {
-            large_photo: '',
-            showModal: false,
             queryWhere: '',
             collectionList: null,
             postList: null,
@@ -193,12 +180,12 @@ export default {
             currentUser: {
                 _id: ''
             },
-			best_answer_user_id: null,
-			question_user_id: null,
+            best_answer_user_id: null,
+            question_user_id: null,
             replyContent: '',
             currentReplyTo: null,
             replyPlaceholder: '写下你的评论...',
-			solved : false
+            solved: false
         }
     },
     onLoad(e) {
@@ -212,13 +199,13 @@ export default {
             this.collectionList = [this.question, this.usersTmp]
             this.getAnswers()
             this.currentUser._id = uniCloud.getCurrentUserInfo().uid
-			db.collection('questions').where(`_id=="${this._id}"`).get().then(res=> {
-				this.question_user_id = res.result.data[0].user_id
-				this.solved = res.result.data[0].had_answer
-				if(this.solved) {
-					this.best_answer_user_id = res.result.data[0].best_answer_user_id
-				}
-			})
+            db.collection('questions').where(`_id=="${this._id}"`).get().then(res => {
+                this.question_user_id = res.result.data[0].user_id
+                this.solved = res.result.data[0].had_answer
+                if (this.solved) {
+                    this.best_answer_user_id = res.result.data[0].best_answer_user_id
+                }
+            })
         }
     },
     methods: {
@@ -230,7 +217,7 @@ export default {
             }
             else
                 this.replyPlaceholder = `回复 ${answer.user_id.nickname}`;
-				
+
             this.$refs.replyPopup.open()
         },
 
@@ -428,6 +415,7 @@ export default {
                 // 更新组件数据
                 this.answers = rootAnswers;
                 this.answersCount = rootAnswers.length;
+
             } catch (error) {
                 console.error('获取回答失败:', error);
             }
@@ -451,19 +439,19 @@ export default {
             await this.getAnswers() // 重新获取数据
         },
 
-        enlarge_photo(file) {
-            this.large_photo = file.url;
-            this.showModal = true;
-        },
-
-        recover_photo() {
-            this.showModal = false;
+        enlarge_photo(files, index) {
+            const urls = files.map(file => file.url)
+            uni.previewImage({
+                urls: urls,
+                current: index,
+                indicator: "number",
+            });
         },
 
         async chooseImage() {
             if (this.selectedImages.length >= 3) {
                 uni.showToast({
-                    title: '最��只能选择3张图片',
+                    title: '最多只能选择3张图片',
                     icon: 'none'
                 });
                 return;
@@ -610,14 +598,14 @@ export default {
         deleteImage(index) {
             this.selectedImages.splice(index, 1);
         },
-		acceptAnswer(answer){
+        acceptAnswer(answer) {
             db.collection('questions').where(`_id=="${this._id}"`).update({
                 best_answer_user_id: answer.user_id._id,
                 had_answer: true
             })
             this.getAnswers()
             this.solved = true
-			this.best_answer_user_id = answer.user_id._id
+            this.best_answer_user_id = answer.user_id._id
         }
     }
 }
@@ -980,68 +968,6 @@ export default {
 
 .submit-btn:disabled {
     background-color: #ccc;
-}
-
-.largephoto {
-    z-index: 1;
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(189, 189, 189, 0.8);
-}
-
-.closelargeimage {
-    margin-right: 30rpx;
-    margin-top: 15rpx;
-    color: #000000;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-}
-
-.largeimage {
-    z-index: 22;
-    margin: auto;
-    margin-top: 300rpx;
-    display: block;
-    width: 85%;
-    max-width: 1200px;
-    max-height: 800px;
-}
-
-.image-viewer {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.9);
-    z-index: 999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.movable-area {
-    width: 100%;
-    height: 100%;
-    position: relative;
-}
-
-.movable-view {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.preview-image {
-    width: 100%;
-    height: 100%;
 }
 
 .close-btn {
