@@ -71,6 +71,10 @@
 			"description":"是否已有答案",
 			"defaultValue": false
 		},
+		"best_answer_user_id" : {
+			"bsonType": "string",
+			"description": "被采纳的人id"
+		},
 		"user_id":{
 			"bsonType": "string",
 			"description":"用户id",
