@@ -2,8 +2,9 @@
 	<view class="container">
 		<view class="search-filter">
 			<view class="filter-box">
-				<uni-data-select :value="selectedCategory" :localdata="categories" @change="handleCategoryChange"
-					placeholder="选择分类" />
+				<uni-data-select v-model="selectedCategory" :clear="true" :localdata="categories"
+					@change="handleCategoryChange" placeholder="请选择">
+				</uni-data-select>
 			</view>
 			<view class="search-box">
 				<uni-search-bar v-model="searchKeyword" placeholder="搜索问题" @confirm="handleSearch" />
@@ -71,7 +72,7 @@
 					contentnomore: '没有更多数据了'
 				},
 				timeFilter: 0,
-				
+
 				pastTime: 0,
 				searchKeyword: '',
 				dbWhere: {},
@@ -79,19 +80,31 @@
 				questionsTemp: null,
 				usersTemp: null,
 				colList: null,
-				 questions: [],
-				            
-				            selectedCategory: '',  // 选中的分类
-				            categories: [
-				                { value: '', text: '全部' },
-				                { value: 'math', text: '数学题' },
-				                { value: 'code', text: '编程题' },
-				                { value: 'resource', text: '求资料' },
-				                { value: 'other', text: '其他' }
-				            ]
+				questions: [],
+				selectedCategory: '', // 选中的分类
+				categories: [
+
+					
+					{
+						value: 'math',
+						text: '数学题'
+					},
+					{
+						value: 'code',
+						text: '编程题'
+					},
+					{
+						value: 'resource',
+						text: '求资料'
+					},
+					{
+						value: 'other',
+						text: '其他'
+					},
+				],
 			}
 		},
-	
+
 		created() {
 			this.setTimeFilter(0)
 			this.usersTemp = db.collection('uni-id-users')
@@ -108,92 +121,92 @@
 		onReachBottom() {
 			this.$refs.udb.loadMore()
 		},
-		 computed: {
-		        // 根据分类和搜索关键词过滤问题
-		        filteredQuestions() {
-		            if (!this.questions) return []
-		            
-		            return this.questions.filter(question => {
-		                // 分类筛选
-		                const categoryMatch = !this.selectedCategory || 
-		                    question.category === this.selectedCategory
-		                
-		                return categoryMatch
-		            })
-		        }
-		    },
+		computed: {
+			// 根据分类和搜索关键词过滤问题
+			filteredQuestions() {
+				if (!this.questions) return []
+
+				return this.questions.filter(question => {
+					// 分类筛选
+					const categoryMatch = !this.selectedCategory ||
+						question.category === this.selectedCategory
+
+					return categoryMatch
+				})
+			}
+		},
 		methods: {
-			 async handleCategoryChange(value) {
-			        console.log('1. 开始处理分类变化, 选择的值:', value)
-			        
-			        // 先更新状态
-			        await this.$nextTick()
-			        this.selectedCategory = value
-			        
-			        // 构建新的查询条件
-			        let whereStr = ''
-			        if (value) {
-			            whereStr = `category == '${value}'`
-			        }
-			        console.log('2. 构建的查询条件:', whereStr)
-			        
-			        // 更新查询
-			        this.questionsTemp = db.collection('questions')
-			            .where(whereStr || {})
-			            .field('title,time,descrip,difficulties,category,is_stick,user_id')
-			            .getTemp()
-			        
-			        this.colList = [this.questionsTemp, this.usersTemp]
-			        
-			        // 确保状态已更新
-			        await this.$nextTick()
-			        
-			        // 手动触发数据重新加载
-			        if (this.$refs.udb) {
-			            this.$refs.udb.loadData({
-			                clear: true
-			            })
-			        }
-			    },
-					 async getCommentedQuestions() {
-					            try {
-					                console.log('开始获取问题')
-					                if (!this.userInfo) return
-					                
-					                const answersRes = await db.collection('answers')
-					                    .where({
-					                        user_id: this.userInfo._id
-					                    })
-					                    .field('question_id')
-					                    .get()
-					                
-					                if (answersRes.result && answersRes.result.data && answersRes.result.data.length > 0) {
-					                    const questionIds = [...new Set(answersRes.result.data.map(answer => answer.question_id))]
-					                    console.log('用户回答过的问题ID:', questionIds)
-					                    
-					                    // 构建查询条件
-					                    let whereCondition = `_id in [${questionIds.map(id => `'${id}'`).join(',')}]`
-					                    if (this.selectedCategory) {
-					                        whereCondition += ` && category == '${this.selectedCategory}'`
-					                    }
-					                    
-					                    console.log('查询条件:', whereCondition)
-					                    
-					                    const questionsRes = await db.collection('questions')
-					                        .where(whereCondition)
-					                        .field(this.field)
-					                        .get()
-					                    
-					                    console.log('查询结果:', questionsRes.result.data)
-					                    this.questions = questionsRes.result.data || []
-					                } else {
-					                    this.questions = []
-					                }
-					            } catch (e) {
-					                console.error('获取回答失败:', e)
-					                this.questions = []
-					            }
-					        },
+			async handleCategoryChange(value) {
+				console.log('1. 开始处理分类变化, 选择的值:', value)
+
+				// 先更新状态
+				await this.$nextTick()
+				
+
+				// 构建新的查询条件
+				let whereStr = ''
+				if (value) {
+					whereStr = `category == '${value}'`
+				}
+				console.log('2. 构建的查询条件:', whereStr)
+
+				// 更新查询
+				this.questionsTemp = db.collection('questions')
+					.where(whereStr || {})
+					.field('title,time,descrip,difficulties,category,is_stick,user_id')
+					.getTemp()
+
+				this.colList = [this.questionsTemp, this.usersTemp]
+
+				// 确保状态已更新
+				await this.$nextTick()
+
+				// 手动触发数据重新加载
+				if (this.$refs.udb) {
+					this.$refs.udb.loadData({
+						clear: true
+					})
+				}
+			},
+			async getCommentedQuestions() {
+				try {
+					console.log('开始获取问题')
+					if (!this.userInfo) return
+
+					const answersRes = await db.collection('answers')
+						.where({
+							user_id: this.userInfo._id
+						})
+						.field('question_id')
+						.get()
+
+					if (answersRes.result && answersRes.result.data && answersRes.result.data.length > 0) {
+						const questionIds = [...new Set(answersRes.result.data.map(answer => answer.question_id))]
+						console.log('用户回答过的问题ID:', questionIds)
+
+						// 构建查询条件
+						let whereCondition = `_id in [${questionIds.map(id => `'${id}'`).join(',')}]`
+						if (this.selectedCategory) {
+							whereCondition += ` && category == '${this.selectedCategory}'`
+						}
+
+						console.log('查询条件:', whereCondition)
+
+						const questionsRes = await db.collection('questions')
+							.where(whereCondition)
+							.field(this.field)
+							.get()
+
+						console.log('查询结果:', questionsRes.result.data)
+						this.questions = questionsRes.result.data || []
+					} else {
+						this.questions = []
+					}
+				} catch (e) {
+					console.error('获取回答失败:', e)
+					this.questions = []
+				}
+			},
 			updateQtmp() {
 				if (true) {
 					//debug
@@ -246,9 +259,9 @@
 					return `(${keywordReg}.test("title") || ${keywordReg}.test("descrip"))`;
 				}
 				if (this.selectedCategory) {
-				            return `category == '${this.selectedCategory}'`
-				        }
-				        return ''
+					return `category == '${this.selectedCategory}'`
+				}
+				return ''
 
 			}
 		}
@@ -269,17 +282,17 @@
 		padding: 5rpx;
 		background-color: #fff;
 		box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
-		
+
 	}
-	
+
 	.search-filter .filter-box {
 		flex: 1;
 	}
-	
+
 	.search-box {
 		flex: 4;
 	}
-	
+
 	.error-message {
 		text-align: center;
 		color: #ff5a5f;
