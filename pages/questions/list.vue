@@ -1,15 +1,20 @@
 <template>
 	<view class="container">
-		<view class="search-box">
-			<uni-search-bar v-model="searchKeyword" placeholder="搜索问题" @confirm="handleSearch" />
+		<view class="search-filter">
+			<view class="filter-box">
+				<uni-data-select :value="selectedCategory" :localdata="categories" @change="handleCategoryChange"
+					placeholder="选择分类" />
+			</view>
+			<view class="search-box">
+				<uni-search-bar v-model="searchKeyword" placeholder="搜索问题" @confirm="handleSearch" />
+			</view>
 		</view>
 		<view class="filter-box">
 			<uni-segmented-control :current="timeFilter" :values="['最近一天', '最近三天']"
 				@clickItem="handleTimeFilterChange" />
 		</view>
-		<unicloud-db ref="udb" v-slot:default="{ data, loading, hasMore, error }" 
-			:collection="colList" :where="dbWhere" :field="field" :getone="false" 
-			:getcount="true" :orderby="'is_stick desc,time desc'">
+		<unicloud-db ref="udb" v-slot:default="{ data, loading, hasMore, error }" :collection="colList" :where="dbWhere"
+			:field="field" :getone="false" :getcount="true" :orderby="'is_stick desc,time desc'">
 			<view v-if="error" class="error-message">{{ error.message }}</view>
 			<view v-else>
 				<uni-list class="question-list" v-if="data && data.length">
@@ -19,7 +24,7 @@
 							<view class="user-info">
 								<view class="avatar-container">
 									<image class="avatar" mode="aspectFill" :src="item.user_id[0].avatar_file.url" />
-									<text class="nickname" >{{ item.user_id[0].nickname }}</text>
+									<text class="nickname">{{ item.user_id[0].nickname }}</text>
 								</view>
 							</view>
 						</template>
@@ -45,7 +50,7 @@
 						</template>
 					</uni-list-item>
 				</uni-list>
-				<view v-else-if = "!loading" class="error-message">暂无数据</view>
+				<view v-else-if="!loading" class="error-message">暂无数据</view>
 			</view>
 			<uni-load-more class="load-more"
 				:status="loading ? 'loading' : (hasMore ? 'more' : 'noMore')"></uni-load-more>
@@ -66,15 +71,27 @@
 					contentnomore: '没有更多数据了'
 				},
 				timeFilter: 0,
+				
 				pastTime: 0,
 				searchKeyword: '',
 				dbWhere: {},
 				field: 'title,time,descrip,difficulties,category,is_stick,user_id{nickname,avatar_file}',
 				questionsTemp: null,
 				usersTemp: null,
-				colList: null
+				colList: null,
+				 questions: [],
+				            
+				            selectedCategory: '',  // 选中的分类
+				            categories: [
+				                { value: '', text: '全部' },
+				                { value: 'math', text: '数学题' },
+				                { value: 'code', text: '编程题' },
+				                { value: 'resource', text: '求资料' },
+				                { value: 'other', text: '其他' }
+				            ]
 			}
 		},
+	
 		created() {
 			this.setTimeFilter(0)
 			this.usersTemp = db.collection('uni-id-users')
@@ -91,17 +108,102 @@
 		onReachBottom() {
 			this.$refs.udb.loadMore()
 		},
+		 computed: {
+		        // 根据分类和搜索关键词过滤问题
+		        filteredQuestions() {
+		            if (!this.questions) return []
+		            
+		            return this.questions.filter(question => {
+		                // 分类筛选
+		                const categoryMatch = !this.selectedCategory || 
+		                    question.category === this.selectedCategory
+		                
+		                return categoryMatch
+		            })
+		        }
+		    },
 		methods: {
+			 async handleCategoryChange(value) {
+			        console.log('1. 开始处理分类变化, 选择的值:', value)
+			        
+			        // 先更新状态
+			        await this.$nextTick()
+			        this.selectedCategory = value
+			        
+			        // 构建新的查询条件
+			        let whereStr = ''
+			        if (value) {
+			            whereStr = `category == '${value}'`
+			        }
+			        console.log('2. 构建的查询条件:', whereStr)
+			        
+			        // 更新查询
+			        this.questionsTemp = db.collection('questions')
+			            .where(whereStr || {})
+			            .field('title,time,descrip,difficulties,category,is_stick,user_id')
+			            .getTemp()
+			        
+			        this.colList = [this.questionsTemp, this.usersTemp]
+			        
+			        // 确保状态已更新
+			        await this.$nextTick()
+			        
+			        // 手动触发数据重新加载
+			        if (this.$refs.udb) {
+			            this.$refs.udb.loadData({
+			                clear: true
+			            })
+			        }
+			    },
+					 async getCommentedQuestions() {
+					            try {
+					                console.log('开始获取问题')
+					                if (!this.userInfo) return
+					                
+					                const answersRes = await db.collection('answers')
+					                    .where({
+					                        user_id: this.userInfo._id
+					                    })
+					                    .field('question_id')
+					                    .get()
+					                
+					                if (answersRes.result && answersRes.result.data && answersRes.result.data.length > 0) {
+					                    const questionIds = [...new Set(answersRes.result.data.map(answer => answer.question_id))]
+					                    console.log('用户回答过的问题ID:', questionIds)
+					                    
+					                    // 构建查询条件
+					                    let whereCondition = `_id in [${questionIds.map(id => `'${id}'`).join(',')}]`
+					                    if (this.selectedCategory) {
+					                        whereCondition += ` && category == '${this.selectedCategory}'`
+					                    }
+					                    
+					                    console.log('查询条件:', whereCondition)
+					                    
+					                    const questionsRes = await db.collection('questions')
+					                        .where(whereCondition)
+					                        .field(this.field)
+					                        .get()
+					                    
+					                    console.log('查询结果:', questionsRes.result.data)
+					                    this.questions = questionsRes.result.data || []
+					                } else {
+					                    this.questions = []
+					                }
+					            } catch (e) {
+					                console.error('获取回答失败:', e)
+					                this.questions = []
+					            }
+					        },
 			updateQtmp() {
-				if(true) {
+				if (true) {
 					//debug
 					this.questionsTemp = db.collection('questions').where(`time >= ${0}`).
 					field('title,time,descrip,difficulties,category,is_stick,user_id').getTemp()
-				}else {
+				} else {
 					this.questionsTemp = db.collection('questions').where(`time >= ${this.pastTime}`).
 					field('title,time,descrip,difficulties,category,is_stick,user_id').getTemp()
 				}
-				
+
 				this.colList = [this.questionsTemp, this.usersTemp]
 			},
 			handleItemClick(id) {
@@ -143,7 +245,11 @@
 					let keywordReg = new RegExp(this.searchKeyword, 'i'); // 忽略大小写
 					return `(${keywordReg}.test("title") || ${keywordReg}.test("descrip"))`;
 				}
-				
+				if (this.selectedCategory) {
+				            return `category == '${this.selectedCategory}'`
+				        }
+				        return ''
+
 			}
 		}
 	}
@@ -156,14 +262,24 @@
 		min-height: 100vh;
 	}
 
+	.search-filter {
+		width: 100%;
+		display: inline-flex;
+		align-items: center;
+		padding: 5rpx;
+		background-color: #fff;
+		box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+		
+	}
+	
+	.search-filter .filter-box {
+		flex: 1;
+	}
+	
 	.search-box {
-		margin-bottom: 20rpx;
+		flex: 4;
 	}
-
-	.filter-box {
-		margin-bottom: 20rpx;
-	}
-
+	
 	.error-message {
 		text-align: center;
 		color: #ff5a5f;
@@ -212,7 +328,7 @@
 		overflow: hidden;
 		white-space: nowrap;
 		text-overflow: ellipsis;
-		
+
 	}
 
 	.question-content {

@@ -64,13 +64,14 @@
 		// #endif
 		data() {
 			return {
-				gridList: [{
-						"text": "未读信息",
-						"icon": "chat"
-					},
+				gridList: [
 					{
 						"text": "我的问题",
 						"icon": "cloud-upload"
+					},
+					{
+						"text": "已答问题",
+						"icon": "chat"
 					},
 					{
 						"text": "工时记录",
@@ -186,6 +187,16 @@
 				})
 			},
 			tapGrid(index) {
+				if(index == 0) {
+					uni.navigateTo({
+						url: "/pages/selfquestions/selfquestions"
+					})
+				}
+				if(index == 1) {
+					uni.navigateTo({
+						url: "/pages/yida/yida"
+					})
+				}
 				if(index == 2) {
 					uni.navigateTo({
 						url: "/pages/manhours/manhours"

@@ -1,37 +1,6 @@
 {
 	"pages": [
 		{
-			"path": "pages/grid/grid",
-			"style": {
-				//#ifndef MP
-				"navigationStyle": "custom"
-				//#endif
-			}
-		}, {
-			"path": "pages/list/search/search",
-			"style": {
-				"navigationBarTitleText": "搜索"
-			}
-		}, {
-			"path": "pages/list/detail",
-			"style": {
-				"app-plus": {
-					"titleNView": {
-						"buttons": [{
-							"type": "share"
-						}],
-						"type": "transparent"
-					}
-				},
-				"h5": {
-					"titleNView": {
-						"type": "transparent"
-					}
-				},
-				"navigationBarTitleText": "文章详情"
-			}
-		},
-		{
 			"path": "pages/ucenter/ucenter",
 			"style": {
 				"navigationStyle": "custom"
@@ -132,10 +101,24 @@
 			}
 		},
 		{
+<<<<<<< HEAD
 			"path" : "pages/rank/rank",
 			"style" : 
 			{
 				"navigationBarTitleText" : "排名"
+=======
+			"path" : "pages/selfquestions/selfquestions",
+			"style" : 
+			{
+				"navigationBarTitleText" : ""
+			}
+		},
+		{
+			"path" : "pages/yida/yida",
+			"style" : 
+			{
+				"navigationBarTitleText" : ""
+>>>>>>> bbeef76f32c37b27b2dc10ca78b0e1c792986ce0
 			}
 		}
 	],
@@ -271,10 +254,10 @@
 			"selectedIconPath": "static/tabbar/list_active.png",
 			"text": "列表"
 		}, {
-			"pagePath": "pages/grid/grid",
+			"pagePath": "pages/rank/rank",
 			"iconPath": "static/tabbar/grid.png",
 			"selectedIconPath": "static/tabbar/grid_active.png",
-			"text": "宫格"
+			"text": "排行"
 		}, {
 			"pagePath": "pages/ucenter/ucenter",
 			"iconPath": "static/tabbar/me.png",
