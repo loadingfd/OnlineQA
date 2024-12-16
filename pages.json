@@ -130,6 +130,20 @@
 			{
 				"navigationBarTitleText" : "管理"
 			}
+		},
+		{
+			"path" : "pages/selfquestions/selfquestions",
+			"style" : 
+			{
+				"navigationBarTitleText" : ""
+			}
+		},
+		{
+			"path" : "pages/yida/yida",
+			"style" : 
+			{
+				"navigationBarTitleText" : ""
+			}
 		}
 	],
 	"subPackages": [{

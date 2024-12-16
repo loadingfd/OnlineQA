@@ -256,6 +256,23 @@ export default {
             const day = date.getDate().toString().padStart(2, '0');
             return `${year}-${month}-${day}`;
         },
+		async createMessage(answerId, questionId, toUserId) {
+		    try {
+		        const db = uniCloud.database();
+		        await db.collection('message').add({
+		            user_id: toUserId,  // 接收消息的用户id
+		            from_user_id: this.userInfo._id,  // 发送消息的用户id
+		            type: 'reply_answer',  // 或 'reply_comment'
+		            content: this.replyContent,  // 回复内容
+		            question_id: questionId,
+		            answer_id: answerId,
+		            create_time: Date.now(),
+		            is_read: false
+		        });
+		    } catch(e) {
+		        console.error('创建消息失败:', e);
+		    }
+		},
         async submitReply() {
             if (!this.currentUser._id) {
                 uni.showToast({
@@ -266,6 +283,15 @@ export default {
             }
 
             try {
+				 // 保存回复
+				        const replyResult = await this.saveReply();
+				        
+				        // 创建消息通知
+				        await this.createMessage(
+				            this.answerId,
+				            this.questionId,
+				            this.toUserId  // 被回复的用户ID
+				        );
                 const db = uniCloud.database()
                 const answersCollection = db.collection('answers')
                 let parentId = this.currentReplyTo._id;
