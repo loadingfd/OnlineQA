@@ -115,7 +115,7 @@
         uni.showLoading({ mask: true });
         this.$refs.form.validate().then((res) => {
 			console.log(res)
-			if(res.category && res.descrip && res.difficulties && res.title)
+			if(res.category && res.descrip && (res.difficulties || res.difficulties == 0 )&& res.title)
 				return this.submitForm(res);
 			else
 				return false
