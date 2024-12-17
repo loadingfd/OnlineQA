@@ -82,7 +82,7 @@ export default {
                     
                     // 2. 直接查询这些问题
                     const questionsRes = await db.collection('questions')
-                        .where(`_id in [${questionIds.map(id => `'${id}'`).join(',')}]`)
+                        .where(`_id in [${questionIds.map(id => `'${id}'`).join(',')}] && user_id != "${this.userInfo._id}"`)
                         .field(this.field)
                         .get()
                         
