@@ -348,6 +348,10 @@
 			},
 			"defaultValue": 0
 		},
+		"stick_costs" : {
+			"bsonType": "int",
+			"description": "置顶花费要求小于志愿工时"
+		},
 		"status": {
 			"bsonType": "int",
 			"defaultValue": 0,

@@ -1,6 +1,5 @@
 {
-	"pages": [
-		{
+	"pages": [{
 			"path": "pages/ucenter/ucenter",
 			"style": {
 				"navigationStyle": "custom"
@@ -18,13 +17,6 @@
 			"path": "pages/ucenter/settings/settings",
 			"style": {
 				"navigationBarTitleText": "设置"
-			}
-		},
-		{
-			"path": "pages/ucenter/read-news-log/read-news-log",
-			"style": {
-				"navigationBarTitleText": "阅读记录",
-				"enablePullDownRefresh": true
 			}
 		}
 		// #ifdef APP
@@ -87,38 +79,38 @@
 			}
 		},
 		{
-			"path" : "pages/manhours/manhours",
-			"style" : 
-			{
-				"navigationBarTitleText" : "工时"
+			"path": "pages/manhours/manhours",
+			"style": {
+				"navigationBarTitleText": "工时"
 			}
 		},
 		{
-			"path" : "pages/manager/manager",
-			"style" : 
-			{
-				"navigationBarTitleText" : "管理"
+			"path": "pages/manager/manager",
+			"style": {
+				"navigationBarTitleText": "管理"
 			}
 		},
 		{
-			"path" : "pages/rank/rank",
-			"style" : 
-			{
-				"navigationBarTitleText" : "排名"
+			"path": "pages/rank/rank",
+			"style": {
+				"navigationBarTitleText": "排名"
 			}
 		},
 		{
-			"path" : "pages/selfquestions/selfquestions",
-			"style" : 
-			{
-				"navigationBarTitleText" : ""
+			"path": "pages/selfquestions/selfquestions",
+			"style": {
+				"navigationBarTitleText": ""
 			}
 		},
 		{
-			"path" : "pages/yida/yida",
-			"style" : 
-			{
-				"navigationBarTitleText" : ""
+			"path": "pages/yida/yida",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		}, {
+			"path": "uni_modules/uni-id-pages/pages/userinfo/cropImage/cropImage",
+			"style": {
+				"navigationBarTitleText": "裁剪图片"
 			}
 		}
 	],

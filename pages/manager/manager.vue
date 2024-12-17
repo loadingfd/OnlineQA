@@ -54,10 +54,11 @@
 										{{ item.title.length > 15 ? item.title.substring(0, 15) + '...' : item.title }}
 									</text>
 								</view>
-								<text class="description">
+								<view class="description">
 									{{ item.descrip.substring(0, 100) }}{{ item.descrip.length > 100 ? '...' : '' }}
-								</text>
+								</view>
 							</view>
+							<view style="font-size: 16rpx; color: #999; text-align: right;"> {{timeToDate(item.time)}}</view>
 						</template>
 					</uni-list-item>
 					</checkbox-group>
@@ -79,7 +80,7 @@
 				startDate: '',
 				endDate: '',
 				dbWhere: '',
-				field: 'title,time,descrip,difficulties,category,is_stick,user_id{nickname,avatar_file}, states',
+				field: 'title,time,descrip,is_stick,user_id{nickname}, states',
 				currentUser: null,
 				selectedItems: [], // 存储选中的项目ID
 			};
@@ -208,9 +209,16 @@
 						}
 					}
 				});
+			},
+				
+			timeToDate(time) {
+				const date = new Date(time);
+				const year = date.getFullYear();
+				const month = (date.getMonth() + 1).toString().padStart(2, '0');
+				const day = date.getDate().toString().padStart(2, '0');
+				return `${year}-${month}-${day}`;
 			}
-
-
+			
 		}
 	};
 </script>
@@ -343,7 +351,7 @@
 		text-align: left;
 		word-wrap: break-word;
 		word-break: break-all;
-		white-space: pre-wrap;
+		white-space: nowrap;
 	}
 
 	.delete-btn {
