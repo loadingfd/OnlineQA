@@ -1,33 +1,29 @@
 <template>
-	<view class="header-back">
-		<uni-icons type="left" size="24" @click="goBack"></uni-icons>
-		<text>返回</text>
-	</view>
 	<view class="header">
 		<text class="title">志愿工时排行榜</text>
 	</view>
 	<view class="top-three">
 		<view class="top-item second">
 			<image :src="topThree[1].avatar_file.url" class="avatar silver"></image>
-			<text class="name">{{ topThree[1].nickname.length > 6 ? topThree[1].nickname.substring(0,6) + '...' : topThree[1].nickname }}</text>
+			<text class="name">{{ topThree[1].nickname.length > 6 ? topThree[1].nickname.substring(0,6) + '...' : topThree[1].nickname || "无名氏"}}</text>
 			<text class="workhour">{{ topThree[1].workhour }}</text>
 		</view>
 		<view class="top-item first">
 			<image :src="topThree[0].avatar_file.url" class="avatar gold"></image>
-			<text class="name crown">{{ topThree[0].nickname.length > 6 ? topThree[0].nickname.substring(0,6) + '...' : topThree[0].nickname }}</text>
+			<text class="name crown">{{ topThree[0].nickname.length > 6 ? topThree[0].nickname.substring(0,6) + '...' : topThree[0].nickname || "无名氏"}}</text>
 			<text class="workhour">{{ topThree[0].workhour }}</text>
 		</view>
 		<view class="top-item third">
 			<image :src="topThree[2].avatar_file.url" class="avatar bronze"></image>
-			<text class="name">{{ topThree[2].nickname.length > 6 ? topThree[2].nickname.substring(0,6) + '...' : topThree[2].nickname }}</text>
+			<text class="name">{{ topThree[2].nickname.length > 6 ? topThree[2].nickname.substring(0,6) + '...' : topThree[2].nickname || "无名氏" }}</text>
 			<text class="workhour">{{ topThree[2].workhour }}</text>
 		</view>
 	</view>
 	<uni-list>
 		<view class="list-item" v-for="(item, index) in rankList" :key="index">
 			<text class="rank">{{ index + 4 }}</text>
-			<text class="name">{{ item.nickname }}</text>
-			<text class="workhour">{{ item.workhour }} 小时</text>
+			<text class="name">{{ item.nickname || "无名氏"}}</text>
+			<text class="workhour">{{ item.workhour }}</text>
 		</view>
 	</uni-list>
 </template>
@@ -42,14 +38,18 @@
 				rankList: []
 			}
 		},
-		onReady() {
+		created() {
 			this.get_all_worktime()
 		},
 		methods: {
 			get_all_worktime() {
 				db.collection("uni-id-users").field("_id, nickname, avatar_file, workhour").get()
 					.then(res => {
-						const sortedData = res.result.data.sort((a, b) => b.workhour - a.workhour)
+                        const data = res.result.data
+                        data.forEach(item => {
+                            if(!item.workhour) item.workhour = 0
+                        })
+						const sortedData = data.sort((a, b) => b.workhour - a.workhour)
 						sortedData.forEach(item => {
 							item.workhour = this.minute_to_time(item.workhour)
 						})
@@ -59,9 +59,6 @@
 			},
 			minute_to_time(minute) {
 				return minute < 60 ? `${minute}分钟` : `${Math.floor(minute / 60)}小时${minute % 60}分钟`
-			},
-			goBack() {
-				uni.navigateBack()
 			}
 		}
 	}

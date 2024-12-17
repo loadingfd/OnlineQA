@@ -7,15 +7,15 @@
 				</uni-data-select>
 			</view>
 			<view class="search-box">
-				<uni-search-bar v-model="searchKeyword" placeholder="搜索问题" @confirm="handleSearch" />
+				<uni-search-bar v-model="searchKeyword" placeholder="搜索问题" 
+				@confirm="handleSearch" @cancel="handleSearch_3" @clear="handleSearch_2"/>
 			</view>
 		</view>
 		<view class="filter-box">
 			<uni-segmented-control :current="timeFilter" :values="['最近一天', '最近三天']"
 				@clickItem="handleTimeFilterChange" />
 		</view>
-		<unicloud-db ref="udb" v-slot:default="{ data, loading, hasMore, error }" :collection="colList" :where="dbWhere"
-			:field="field" :getone="false" :getcount="true" :orderby="'is_stick desc,time desc'">
+		<unicloud-db ref="udb" v-slot:default="{ data, loading, hasMore, error }" :collection="colList" :getone="false" :getcount="true" :orderby="'is_stick desc,time desc'">
 			<view v-if="error" class="error-message">{{ error.message }}</view>
 			<view v-else>
 				<uni-list class="question-list" v-if="data && data.length">
@@ -75,7 +75,7 @@
 
 				pastTime: 0,
 				searchKeyword: '',
-				dbWhere: {},
+				dbWhere: '',
 				field: 'title,time,descrip,difficulties,category,is_stick,user_id{nickname,avatar_file}',
 				questionsTemp: null,
 				usersTemp: null,
@@ -83,8 +83,6 @@
 				questions: [],
 				selectedCategory: '', // 选中的分类
 				categories: [
-
-					
 					{
 						value: 'math',
 						text: '数学题'
@@ -107,6 +105,7 @@
 
 		created() {
 			this.setTimeFilter(0)
+			this.updateDbWhere()
 			this.usersTemp = db.collection('uni-id-users')
 				.field('_id,nickname,avatar_file').getTemp()
 			this.colList = [this.questionsTemp, this.usersTemp]
@@ -136,88 +135,34 @@
 			}
 		},
 		methods: {
-			async handleCategoryChange(value) {
-				console.log('1. 开始处理分类变化, 选择的值:', value)
-
-				// 先更新状态
-				await this.$nextTick()
-				
-
-				// 构建新的查询条件
-				let whereStr = ''
-				if (value) {
-					whereStr = `category == '${value}'`
-				}
-				console.log('2. 构建的查询条件:', whereStr)
-
-				// 更新查询
-				this.questionsTemp = db.collection('questions')
-					.where(whereStr || {})
-					.field('title,time,descrip,difficulties,category,is_stick,user_id')
-					.getTemp()
-
-				this.colList = [this.questionsTemp, this.usersTemp]
-
-				// 确保状态已更新
-				await this.$nextTick()
-
-				// 手动触发数据重新加载
-				if (this.$refs.udb) {
-					this.$refs.udb.loadData({
-						clear: true
-					})
-				}
+			handleCategoryChange(value) {
+				this.updateDbWhere()
 			},
-			async getCommentedQuestions() {
-				try {
-					console.log('开始获取问题')
-					if (!this.userInfo) return
+			updateDbWhere() {
+				let conditions = [];
+				conditions.push("states == true")
 
-					const answersRes = await db.collection('answers')
-						.where({
-							user_id: this.userInfo._id
-						})
-						.field('question_id')
-						.get()
-
-					if (answersRes.result && answersRes.result.data && answersRes.result.data.length > 0) {
-						const questionIds = [...new Set(answersRes.result.data.map(answer => answer.question_id))]
-						console.log('用户回答过的问题ID:', questionIds)
-
-						// 构建查询条件
-						let whereCondition = `_id in [${questionIds.map(id => `'${id}'`).join(',')}]`
-						if (this.selectedCategory) {
-							whereCondition += ` && category == '${this.selectedCategory}'`
-						}
-
-						console.log('查询条件:', whereCondition)
-
-						const questionsRes = await db.collection('questions')
-							.where(whereCondition)
-							.field(this.field)
-							.get()
-
-						console.log('查询结果:', questionsRes.result.data)
-						this.questions = questionsRes.result.data || []
-					} else {
-						this.questions = []
-					}
-				} catch (e) {
-					console.error('获取回答失败:', e)
-					this.questions = []
-				}
-			},
-			updateQtmp() {
-				if (true) {
-					//debug
-					this.questionsTemp = db.collection('questions').where(`time >= ${0}`).
-					field('title,time,descrip,difficulties,category,is_stick,user_id').getTemp()
-				} else {
-					this.questionsTemp = db.collection('questions').where(`time >= ${this.pastTime}`).
-					field('title,time,descrip,difficulties,category,is_stick,user_id').getTemp()
+				if (this.searchKeyword) {
+					let keywordReg = new RegExp(this.searchKeyword, 'i');
+					conditions.push(`(${keywordReg}.test("title") || ${keywordReg}.test("descrip"))`);
 				}
 
-				this.colList = [this.questionsTemp, this.usersTemp]
+				if (this.selectedCategory) {
+					conditions.push(`category == '${this.selectedCategory}'`);
+				}
+
+				if (this.pastTime) {
+					this.pastTime = 0
+					conditions.push(`time >= ${this.pastTime}`);
+				}
+				console.log("条件更新")
+				console.log(conditions)
+				this.dbWhere = conditions.join(' && ');
+				console.log(this.dbWhere)
+				console.log(this.dbWhere)
+				this.questionsTemp = db.collection('questions').where(this.dbWhere)
+					.field('title,time,descrip,difficulties,category,is_stick,user_id, states').getTemp();
+				this.colList = [this.questionsTemp, this.usersTemp];
 			},
 			handleItemClick(id) {
 				uni.navigateTo({
@@ -239,6 +184,7 @@
 			handleTimeFilterChange(e) {
 				this.timeFilter = e.currentIndex
 				this.setTimeFilter(e.currentIndex)
+				this.updateDbWhere()
 			},
 			setTimeFilter(index) {
 				const days = index === 0 ? 1 : 3
@@ -246,23 +192,17 @@
 				pastTime.setDate(pastTime.getDate() - (days - 1))
 				pastTime.setHours(0, 0, 0, 0)
 				this.pastTime = pastTime.getTime()
-				this.dbWhere = this.getSearchWhere()
-				//console.log(this.pastTime)
-				this.updateQtmp()
 			},
-			handleSearch(e) {
-				this.dbWhere = this.getSearchWhere()
+			handleSearch() {
+				this.updateDbWhere()
 			},
-			getSearchWhere() {
-				if (this.searchKeyword) {
-					let keywordReg = new RegExp(this.searchKeyword, 'i'); // 忽略大小写
-					return `(${keywordReg}.test("title") || ${keywordReg}.test("descrip"))`;
-				}
-				if (this.selectedCategory) {
-					return `category == '${this.selectedCategory}'`
-				}
-				return ''
-
+			handleSearch_2() {
+				this.searchKeyword = ""
+			},
+			handleSearch_3() {
+				if(!this.searchKeyword) return
+				this.searchKeyword = ""
+				this.updateDbWhere()
 			}
 		}
 	}

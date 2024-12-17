@@ -67,7 +67,10 @@ export default {
 
             db.collection("uni-id-users").where(`_id == "${uid}"`).field("workhour").get()
                 .then(res => {
-                    this.totaltime = res.result.data[0].workhour
+                    if(res.result.data[0].workhour)
+						this.totaltime = res.result.data[0].workhour
+					else
+						this.totaltime
                 })
         },
         getDuration(difficulty) {

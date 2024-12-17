@@ -79,24 +79,15 @@
 					}
 				],
 				ucenterList: [
-					[
-						{
-							"title": this.$t('mine.signIn'),
-							"event": 'signIn',
-							"icon": "compose"
-						},
-						{
-							"title":this.$t('mine.readArticles'),
-							"to": '/pages/ucenter/read-news-log/read-news-log',
-							"icon": "flag"
-						},
-						{
-							"title": this.$t('mine.myScore'),
-							"to": '',
-							"event": 'getScore',
-							"icon": "paperplane"
-						}
-					],
+					[{
+						"title": "发布过的问题",
+						"to": "/pages/selfquestions/selfquestions",
+						"icon": "paperplane"
+					}, {
+						"title": "发布过留言的问题",
+						"to": '/pages/yida/yida',
+						"icon": "compose"
+					}],
 					[{
 						"title": this.$t('mine.feedback'),
 						"to": '/uni_modules/uni-feedback/pages/opendb-feedback/opendb-feedback',

@@ -101,12 +101,13 @@
 			}
 		},
 		{
-<<<<<<< HEAD
 			"path" : "pages/rank/rank",
 			"style" : 
 			{
 				"navigationBarTitleText" : "排名"
-=======
+			}
+		},
+		{
 			"path" : "pages/selfquestions/selfquestions",
 			"style" : 
 			{
@@ -118,7 +119,6 @@
 			"style" : 
 			{
 				"navigationBarTitleText" : ""
->>>>>>> bbeef76f32c37b27b2dc10ca78b0e1c792986ce0
 			}
 		}
 	],

@@ -24,9 +24,12 @@
 			<button class="batch-delete-btn" @click="batchDelete">
 				批量删除({{ selectedItems.length }})
 			</button>
+			<button class="batch-restore-btn" @click="batchRestore">
+				批量恢复({{ selectedItems.length }})
+			</button>
 		</view>
 		<unicloud-db ref="udb" v-slot:default="{ data, loading, hasMore, error }" :collection="'questions'"
-			:where="dbWhere" :field="field" :getone="false" :getcount="true" :orderby="'is_stick desc,time desc'">
+			:where="dbWhere" :field="field" :getone="false" :getcount="true" :orderby="'states desc,is_stick desc,time desc'">
 			<view v-if="error" class="error-message">{{ error.message }}</view>
 			<view v-else>
 				<uni-list class="question-list" v-if="data && data.length">
@@ -47,7 +50,7 @@
 						<template v-slot:body>
 							<view class="question-content">
 								<view class="title-container">
-									<text class="title">
+									<text class="title" :style="{ color: item.states ? '#333' : 'red', textDecoration: item.states ? 'none' : 'line-through' }">
 										{{ item.title.length > 15 ? item.title.substring(0, 15) + '...' : item.title }}
 									</text>
 								</view>
@@ -75,8 +78,8 @@
 			return {
 				startDate: '',
 				endDate: '',
-				dbWhere: 'states==true',
-				field: 'title,time,descrip,difficulties,category,is_stick,user_id{nickname,avatar_file}',
+				dbWhere: '',
+				field: 'title,time,descrip,difficulties,category,is_stick,user_id{nickname,avatar_file}, states',
 				currentUser: null,
 				selectedItems: [], // 存储选中的项目ID
 			};
@@ -97,10 +100,13 @@
 			applyFilter() {
 				const startTime = new Date(this.startDate).getTime();
 				const endTime = new Date(this.endDate).getTime() + 86400000; // 加一天的毫秒数，确保包含结束日期的整天
-				this.dbWhere = `time >= ${startTime} && time < ${endTime} && states == true`;
-				this.$refs.udb.loadData({
-					clear: true
-				});
+				if(!this.endDate)
+					this.dbWhere = `time >= ${startTime}`;
+				else if(!this.startDate)
+					this.dbWhere = `time < ${endTime}`;
+				else
+					this.dbWhere = `time >= ${startTime} && time < ${endTime}`;
+				console.log(this.dbWhere)
 			},
 
 			// 处理复选框变化
@@ -152,35 +158,6 @@
 					}
 				});
 			},
-
-			// 删除单个问题
-			async deleteQuestion(questionId) {
-				uni.showModal({
-					title: '确认删除',
-					content: '确定要删除这条帖子吗？',
-					success: async (res) => {
-						if (res.confirm) {
-							try {
-								await db.collection('questions').doc(questionId).update({
-									states: false
-								});
-								uni.showToast({
-									title: '删除成功',
-									icon: 'success'
-								});
-								await this.fetchQuestions(); // 刷新列表数据
-							} catch (error) {
-								uni.showToast({
-									title: '删除失败',
-									icon: 'error'
-								});
-								console.error('删除问题失败:', error);
-							}
-						}
-					}
-				});
-			},
-
 			// 处理列表项点击
 			handleItemClick(id) {
 				if (this.selectedItems.length === 0) { // 如果没有选中项，才进行跳转
@@ -188,6 +165,49 @@
 						url: '/pages/questions/detail?id=' + id
 					});
 				}
+			},
+
+			// 批量恢复
+			async batchRestore() {
+				if (this.selectedItems.length === 0) {
+					uni.showToast({
+						title: '请选择要恢复的项目',
+						icon: 'none'
+					});
+					return;
+				}
+
+				uni.showModal({
+					title: '确认恢复',
+					content: `确定要恢复选中的 ${this.selectedItems.length} 个帖子吗？`,
+					success: async (res) => {
+						if (res.confirm) {
+							try {
+								const promises = this.selectedItems.map(id =>
+									db.collection('questions').doc(id).update({
+										states: true
+									})
+								);
+
+								await Promise.all(promises);
+
+								uni.showToast({
+									title: '恢复成功',
+									icon: 'success'
+								});
+
+								this.selectedItems = []; // 清空选中项
+								this.$refs.udb.refresh()
+							} catch (error) {
+								uni.showToast({
+									title: '恢复失败',
+									icon: 'error'
+								});
+								console.error('批量恢复失败:', error);
+							}
+						}
+					}
+				});
 			}
 
 
@@ -250,6 +270,15 @@
 
 	.batch-delete-btn {
 		background-color: #ff4d4f;
+		color: #ffffff;
+		font-size: 28rpx;
+		padding: 10rpx 30rpx;
+		border-radius: 8rpx;
+		border: none;
+	}
+
+	.batch-restore-btn {
+		background-color: #52c41a;
 		color: #ffffff;
 		font-size: 28rpx;
 		padding: 10rpx 30rpx;
