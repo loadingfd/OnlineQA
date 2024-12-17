@@ -59,6 +59,11 @@ export default {
                     this.userInfo = userInfo
                     this.getCommentedQuestions()
                 }
+				else {
+				    uni.navigateTo({
+				        url: '/uni_modules/uni-id-pages/pages/login/login-withoutpwd'
+				    })
+				}
     },
     methods: {
         async getCommentedQuestions() {

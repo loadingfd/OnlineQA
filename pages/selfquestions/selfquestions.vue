@@ -4,6 +4,10 @@
 	    <text>返回</text>
 	</view>
     <view class="container">
+		<view v-if="!userInfo" class="login-tip">
+		            <text class="tip-text">请先登录后查看</text>
+		</view>
+		<view v-else>
         <unicloud-db ref="udb" v-slot:default="{ data, loading, hasMore, error }" 
             collection="questions" 
             :where="dbWhere" 
@@ -46,6 +50,7 @@
                 :status="loading ? 'loading' : (hasMore ? 'more' : 'noMore')"></uni-load-more>
         </unicloud-db>
     </view>
+	</view>
 </template>
 
 <script>
